@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GA4 Event Builder – Calibrate</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f5f4f2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    select optgroup { font-weight: 700; }
+    input:focus, select:focus { outline: none; box-shadow: 0 0 0 2px #E8501B; border-color: transparent !important; }
+    ::selection { background: #E8501B; color: white; }
+    .header-bar { background: #1a1a1a; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .logo-text { font-size: 1.5rem; font-weight: 900; color: #E8501B; letter-spacing: -0.04em; line-height: 1; }
+    .logo-sub { font-size: 0.6rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 1px; }
+    .badge-tool { font-size: 0.7rem; font-weight: 700; color: #E8501B; border: 1.5px solid #E8501B; padding: 0.2rem 0.6rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .json-preview { background: #111; color: #a8d8a0; border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.7rem; line-height: 1.6; overflow-x: auto; white-space: pre; max-height: 220px; overflow-y: auto; margin-top: 0.75rem; }
+    button:active { transform: scale(0.97); }
+    .event-card { background: white; border-radius: 12px; border: 1.5px solid #e8e6e2; margin-bottom: 1rem; overflow: hidden; transition: box-shadow 0.15s; }
+    .event-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .tab-btn { padding: 0.5rem 1.25rem; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: transparent; transition: all 0.15s; border-bottom: 2px solid transparent; font-family: inherit; }
+    .tab-btn.active { color: #E8501B; border-bottom: 2px solid #E8501B; }
+    .tab-btn.inactive { color: #aaa; }
+    .toggle-wrap { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; }
+    .toggle-track { width: 36px; height: 20px; border-radius: 10px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-thumb { width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .badge { font-size: 0.6rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .add-btn { width: 100%; padding: 0.875rem; background: transparent; color: #E8501B; border: 2px dashed #E8501B; border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; margin-bottom: 1rem; transition: all 0.15s; font-family: inherit; }
+    .add-btn:hover { background: #fff0eb; }
+    .google-tag-card { background: white; border-radius: 12px; border: 1.5px solid #e8e6e2; margin-bottom: 1rem; overflow: hidden; }
+    .google-tag-header { background: linear-gradient(135deg, #1a1a1a 0%, #2a1a12 100%); padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+    .section-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 1rem; }
+    .section-divider-line { flex: 1; height: 1px; background: #e8e6e2; }
+    .section-divider-label { font-size: 0.65rem; font-weight: 800; color: #bbb; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div>
+    <div class="logo-text">calibrate</div>
+    <div class="logo-sub">part of iO</div>
+  </div>
+  <div class="badge-tool">GA4 Event Builder</div>
+</div>
+
+<div id="root"></div>
+
+<script type="text/babel">
+  const { useState, useMemo } = React;
+  const ORANGE = "#E8501B";
+  const DARK = "#1a1a1a";
+
+  // ─── KNOWN VARIABLES ─────────────────────────────────────────────────────────
+  const KNOWN_VARIABLES = {
+    "{{Click Text}}":       { type:"BUILT_IN", name:"Click Text",       builtInType:"CLICK_TEXT" },
+    "{{Click URL}}":        { type:"BUILT_IN", name:"Click URL",        builtInType:"CLICK_URL" },
+    "{{Click Element}}":    { type:"BUILT_IN", name:"Click Element",    builtInType:"CLICK_ELEMENT" },
+    "{{Click Classes}}":    { type:"BUILT_IN", name:"Click Classes",    builtInType:"CLICK_CLASSES" },
+    "{{Page URL}}":         { type:"BUILT_IN", name:"Page URL",         builtInType:"URL" },
+    "{{Page Path}}":        { type:"BUILT_IN", name:"Page Path",        builtInType:"PAGE_PATH" },
+    "{{Page Title}}":       { type:"BUILT_IN", name:"Page Title",       builtInType:"PAGE_TITLE" },
+    "{{Referrer}}":         { type:"BUILT_IN", name:"Referrer",         builtInType:"REFERRER" },
+    "{{Unique Event ID}}":  { type:"CUSTOM_JS", name:"Unique Event ID" },
+    "{{DL - ecommerce.currency}}":       { type:"DL_VAR", name:"DL - ecommerce.currency",       dlKey:"ecommerce.currency" },
+    "{{DL - ecommerce.value}}":          { type:"DL_VAR", name:"DL - ecommerce.value",          dlKey:"ecommerce.value" },
+    "{{DL - ecommerce.items}}":          { type:"DL_VAR", name:"DL - ecommerce.items",          dlKey:"ecommerce.items" },
+    "{{DL - ecommerce.transaction_id}}": { type:"DL_VAR", name:"DL - ecommerce.transaction_id",dlKey:"ecommerce.transaction_id" },
+    "{{DL - ecommerce.tax}}":            { type:"DL_VAR", name:"DL - ecommerce.tax",            dlKey:"ecommerce.tax" },
+    "{{DL - ecommerce.shipping}}":       { type:"DL_VAR", name:"DL - ecommerce.shipping",       dlKey:"ecommerce.shipping" },
+    "{{DL - ecommerce.coupon}}":         { type:"DL_VAR", name:"DL - ecommerce.coupon",         dlKey:"ecommerce.coupon" },
+    "{{DL - search_term}}":              { type:"DL_VAR", name:"DL - search_term",              dlKey:"search_term" },
+    "{{TOS - ms}}":                      { type:"DL_VAR", name:"TOS - ms",                      dlKey:"engagement_time_msec" },
+    "{{ga4 - measurement id}}":          { type:"CONSTANT", name:"ga4 - measurement id",        value:"" },
+  };
+
+  // ─── EVENT DEFINITIONS ────────────────────────────────────────────────────────
+  const EVENTS_DATA = [
+    { group:"Navigation", events:[
+      { id:"internal_links", name:"internal_links", tagName:"ga4 - internal links", triggerName:"jl - internal link",
+        params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"external_links", name:"external_links", tagName:"ga4 - external links", triggerName:"jl - external link",
+        params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+    ]},
+    { group:"E-commerce", events:[
+      { id:"view_item", name:"view_item", tagName:"ga4 - view_item", triggerName:"ce - view_item",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"add_to_cart", name:"add_to_cart", tagName:"ga4 - add_to_cart", triggerName:"ce - add_to_cart",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"add_to_wishlist", name:"add_to_wishlist", tagName:"ga4 - add_to_wishlist", triggerName:"ce - add_to_wishlist",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"view_cart", name:"view_cart", tagName:"ga4 - view_cart", triggerName:"ce - view_cart",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"remove_from_cart", name:"remove_from_cart", tagName:"ga4 - remove_from_cart", triggerName:"ce - remove_from_cart",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"begin_checkout", name:"begin_checkout", tagName:"ga4 - begin_checkout", triggerName:"ce - begin_checkout",
+        params:[{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"purchase", name:"purchase", tagName:"ga4 - purchase", triggerName:"ce - purchase",
+        params:[{name:"transaction_id",value:"{{DL - ecommerce.transaction_id}}"},{name:"value",value:"{{DL - ecommerce.value}}"},{name:"tax",value:"{{DL - ecommerce.tax}}"},{name:"shipping",value:"{{DL - ecommerce.shipping}}"},{name:"currency",value:"{{DL - ecommerce.currency}}"},{name:"coupon",value:"{{DL - ecommerce.coupon}}"},{name:"items",value:"{{DL - ecommerce.items}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+    ]},
+    { group:"Engagement", events:[
+      { id:"view_search_results", name:"view_search_results", tagName:"ga4 - view_search_results", triggerName:"ce - view_search_results",
+        params:[{name:"search_term",value:"{{DL - search_term}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"time_on_site", name:"TimeOnSite", tagName:"ga4 - TimeOnSite", triggerName:"TOS 30 + 10limit",
+        params:[{name:"engagement_time_msec",value:"{{TOS - ms}}"}] },
+    ]},
+    { group:"Custom", events:[
+      { id:"custom", name:"", tagName:"", triggerName:"", params:[] }
+    ]}
+  ];
+
+  const ALL_EVENTS = EVENTS_DATA.flatMap(g => g.events);
+
+  // ─── DETECT VARIABLES ────────────────────────────────────────────────────────
+  function detectVariables(params) {
+    const found = {};
+    params.forEach(p => {
+      const matches = (p.value || "").match(/\{\{[^}]+\}\}/g) || [];
+      matches.forEach(m => {
+        if (KNOWN_VARIABLES[m]) found[m] = KNOWN_VARIABLES[m];
+        else {
+          const dlMatch = m.match(/^\{\{DL - (.+)\}\}$/);
+          if (dlMatch) found[m] = { type:"DL_VAR", name:m.replace(/\{\{|\}\}/g,""), dlKey:dlMatch[1] };
+        }
+      });
+    });
+    return found;
+  }
+
+  // ─── BUILD GTM JSON ───────────────────────────────────────────────────────────
+  function buildGTMJson(events, mode, googleTagConfig) {
+    const fp = Date.now();
+    const now = new Date().toISOString().replace("T"," ").substring(0,19);
+    const isNew = mode === "new";
+    const tags = [], triggers = [], variables = [], builtInVars = [];
+    let tagIdx = 1, triggerIdx = 100, varIdx = 200;
+
+    // ── Constant variable for Measurement ID ──────────────────────────────────
+    const includeGoogleTag = googleTagConfig.include && googleTagConfig.measurementId.trim();
+    const constantVarId = String(varIdx++);
+
+    if (isNew && includeGoogleTag) {
+      variables.push({
+        accountId:"0", containerId:"0",
+        variableId: constantVarId,
+        name: "ga4 - measurement id",
+        type: "c",
+        parameter: [{ type:"TEMPLATE", key:"value", value: googleTagConfig.measurementId.trim() }],
+        fingerprint: String(fp + 1)
+      });
+    }
+
+    // ── Google Tag (Configuration Tag) ───────────────────────────────────────
+    const initTriggerId = "99";
+    if (includeGoogleTag) {
+      const googleTagParams = [
+        { type:"TEMPLATE", key:"tagId", value:"{{ga4 - measurement id}}" }
+      ];
+      if (googleTagConfig.sendPageView) {
+        googleTagParams.push({ type:"BOOLEAN", key:"sendPageView", value:"true" });
+      }
+      tags.push({
+        accountId:"0", containerId:"0", tagId:"0",
+        name: "google tag - ga4",
+        type: "googtag",
+        parameter: googleTagParams,
+        firingTriggerId: [initTriggerId],
+        tagFiringOption: "ONCE_PER_EVENT",
+        fingerprint: String(fp + 2),
+        monitoringMetadata: { type:"MAP" },
+        consentSettings: { consentStatus:"NOT_SET" }
+      });
+
+      // Initialization – All Pages trigger
+      triggers.push({
+        accountId:"0", containerId:"0", triggerId: initTriggerId,
+        name: "Initialization - All Pages",
+        type: "INIT",
+        fingerprint: String(fp + 3)
+      });
+
+      // Built-in var for All Pages
+      builtInVars.push({ type:"PAGE_URL", accountId:"0", containerId:"0" });
+      builtInVars.push({ type:"PAGE_PATH", accountId:"0", containerId:"0" });
+    }
+
+    // ── Event-level variables ─────────────────────────────────────────────────
+    const allVars = {};
+    events.forEach(ev => Object.assign(allVars, detectVariables(ev.params)));
+
+    if (isNew) {
+      const neededBuiltIns = new Set();
+      Object.entries(allVars).forEach(([syntax, def]) => {
+        if (def.type === "BUILT_IN") { neededBuiltIns.add(def.builtInType); return; }
+        if (def.name === "ga4 - measurement id" && includeGoogleTag) return; // already added as constant
+        const v = { accountId:"0", containerId:"0", variableId:String(varIdx++), name:def.name, fingerprint:String(fp+varIdx) };
+        if (def.type === "DL_VAR") {
+          v.type = "v";
+          v.parameter = [{ type:"INTEGER",key:"dataLayerVersion",value:"2" },{ type:"BOOLEAN",key:"setDefaultValue",value:"false" },{ type:"TEMPLATE",key:"name",value:def.dlKey }];
+        } else if (def.type === "CUSTOM_JS") {
+          v.type = "jsm";
+          v.parameter = [{ type:"TEMPLATE",key:"javascript",value:"function() { return Math.random().toString(36).substring(2) + Date.now().toString(36); }" }];
+        } else if (def.type === "CONSTANT") {
+          v.type = "c";
+          v.parameter = [{ type:"TEMPLATE",key:"value",value:def.value||"" }];
+        }
+        variables.push(v);
+      });
+      neededBuiltIns.forEach(t => {
+        if (!builtInVars.find(b => b.type === t)) builtInVars.push({ type:t, accountId:"0", containerId:"0" });
+      });
+    }
+
+    // ── Event tags + triggers ─────────────────────────────────────────────────
+    events.forEach((ev, idx) => {
+      const tId = String(tagIdx++);
+      const trId = String(triggerIdx++);
+      const filtered = ev.params.filter(p => p.name.trim());
+      const paramList = filtered.map(p => ({ type:"MAP", map:[{ type:"TEMPLATE",key:"name",value:p.name },{ type:"TEMPLATE",key:"value",value:p.value }] }));
+      const tagParams = [
+        { type:"TEMPLATE", key:"measurementId", value:ev.measurementId },
+        { type:"TEMPLATE", key:"eventName", value:ev.eventName }
+      ];
+      if (paramList.length > 0) tagParams.push({ type:"LIST",key:"eventParameters",list:paramList });
+      const tag = {
+        accountId:"0", containerId:"0", tagId:tId,
+        name: ev.tagName || `ga4 - ${ev.eventName}`,
+        type:"gaawe", parameter:tagParams,
+        tagFiringOption:"ONCE_PER_EVENT",
+        fingerprint:String(fp+idx*10+100),
+        monitoringMetadata:{ type:"MAP" },
+        consentSettings:{ consentStatus:"NOT_SET" }
+      };
+      const includeTrigger = isNew || ev.includeTrigger;
+      if (includeTrigger) {
+        tag.firingTriggerId = [trId];
+        triggers.push({
+          accountId:"0", containerId:"0", triggerId:trId,
+          name: ev.triggerName || `ce - ${ev.eventName}`,
+          type:"CUSTOM_EVENT",
+          customEventFilter:[{ type:"EQUALS",parameter:[{ type:"TEMPLATE",key:"arg0",value:"{{_event}}" },{ type:"TEMPLATE",key:"arg1",value:ev.eventName }] }],
+          fingerprint:String(fp+idx*10+101)
+        });
+      }
+      tags.push(tag);
+    });
+
+    return {
+      exportFormatVersion:2, exportTime:now,
+      containerVersion:{
+        path:"accounts/0/containers/0/versions/0",
+        accountId:"0", containerId:"0", containerVersionId:"0",
+        tag:tags, trigger:triggers, variable:variables, builtInVariable:builtInVars,
+        folder:[], fingerprint:String(fp+9999)
+      }
+    };
+  }
+
+  // ─── STYLES ───────────────────────────────────────────────────────────────────
+  const S = {
+    input: { width:"100%", border:"1.5px solid #e2e0dc", borderRadius:"8px", padding:"0.6rem 0.85rem", fontSize:"0.85rem", color:DARK, background:"white", fontFamily:"inherit" },
+    label: { display:"block", fontSize:"0.65rem", fontWeight:800, color:"#999", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:"0.3rem" },
+    card: { background:"white", borderRadius:"12px", border:"1.5px solid #e8e6e2", padding:"1.25rem", marginBottom:"0.75rem" },
+  };
+
+  let gid = 1;
+  function uid() { return gid++; }
+
+  function makeEvent(def, mode) {
+    return {
+      uid: uid(),
+      selectedId: def.id,
+      eventName: def.name || "",
+      tagName: def.tagName || "",
+      triggerName: def.triggerName || "",
+      measurementId: "{{ga4 - measurement id}}",
+      params: def.params.map((p,i) => ({id:i+1,...p})),
+      nextParamId: def.params.length+2,
+      collapsed: false,
+      showJSON: false,
+      includeTrigger: mode !== "existing",
+    };
+  }
+
+  // ─── TOGGLE ───────────────────────────────────────────────────────────────────
+  function Toggle({ on, onChange, label }) {
+    return (
+      <div className="toggle-wrap" onClick={() => onChange(!on)}>
+        <div className="toggle-track" style={{ background: on ? ORANGE : "#ddd" }}>
+          <div className="toggle-thumb" style={{ left: on ? "19px" : "3px" }} />
+        </div>
+        <span style={{ fontSize:"0.78rem", color: on ? DARK : "#aaa", fontWeight:600 }}>{label}</span>
+      </div>
+    );
+  }
+
+  // ─── GOOGLE TAG CARD ──────────────────────────────────────────────────────────
+  function GoogleTagCard({ config, onChange, mode }) {
+    const { include, measurementId, sendPageView } = config;
+    const isExisting = mode === "existing";
+
+    return (
+      <div className="google-tag-card">
+        <div className="google-tag-header">
+          <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
+            <div style={{ width:28, height:28, background:ORANGE, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <span style={{ fontSize:"0.75rem", fontWeight:900, color:"white" }}>G</span>
+            </div>
+            <div>
+              <p style={{ fontSize:"0.85rem", fontWeight:800, color:"white" }}>Google Tag – ga4</p>
+              <p style={{ fontSize:"0.65rem", color:"#888", marginTop:"1px" }}>
+                {include && measurementId ? measurementId : "Konfigurationstag + Constant variabel"}
+              </p>
+            </div>
+          </div>
+          <Toggle on={include} onChange={v => onChange({...config, include:v})} label="Inkluder" />
+        </div>
+
+        {include && (
+          <div style={{ padding:"1.25rem" }}>
+            {isExisting && (
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:"8px", padding:"0.65rem 0.875rem", marginBottom:"0.875rem", display:"flex", gap:"0.5rem", alignItems:"flex-start" }}>
+                <span style={{ color:"#f59e0b", flexShrink:0 }}>⚠</span>
+                <p style={{ fontSize:"0.75rem", color:"#92400e", lineHeight:1.5 }}>
+                  Eksisterende container-tilstand: Google Tag inkluderes i JSON, men Constant-variablen <code style={{fontFamily:"monospace",background:"rgba(0,0,0,0.06)",padding:"0 3px",borderRadius:2}}>ga4 - measurement id</code> genereres ikke. Bekræft at den eksisterer i containeren.
+                </p>
+              </div>
+            )}
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem", alignItems:"flex-end" }}>
+              <div>
+                <label style={S.label}>Measurement ID</label>
+                <input
+                  style={{ ...S.input, fontFamily:"monospace", color: measurementId.startsWith("G-") ? ORANGE : DARK }}
+                  type="text"
+                  value={measurementId}
+                  onChange={e => onChange({...config, measurementId: e.target.value})}
+                  placeholder="G-XXXXXXXXXX"
+                />
+              </div>
+              <div style={{ paddingBottom:"0.65rem" }}>
+                <Toggle on={sendPageView} onChange={v => onChange({...config, sendPageView:v})} label="Send page_view automatisk" />
+              </div>
+            </div>
+
+            {!isExisting && (
+              <div style={{ marginTop:"0.875rem", background:"#f0faf0", border:"1.5px solid #c8eac8", borderRadius:"8px", padding:"0.75rem 1rem" }}>
+                <p style={{...S.label, color:"#2a7a2a", marginBottom:"0.5rem"}}>Hvad genereres</p>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"0.35rem" }}>
+                  {[
+                    { label:"Constant", name:"ga4 - measurement id", color:"#e8f8e8", text:"#2a7a2a" },
+                    { label:"Tag", name:"google tag - ga4", color:"#fff0e8", text:ORANGE },
+                    { label:"Trigger", name:"Initialization - All Pages", color:"#e0f0ff", text:"#1a6fb5" },
+                  ].map(item => (
+                    <span key={item.name} style={{ fontSize:"0.7rem", background:item.color, border:`1px solid ${item.color}`, borderRadius:"4px", padding:"0.15rem 0.5rem", display:"flex", alignItems:"center", gap:"0.3rem" }}>
+                      <span style={{ fontSize:"0.55rem", fontWeight:800, color:item.text, textTransform:"uppercase" }}>{item.label}</span>
+                      <span style={{ fontFamily:"monospace", color:item.text }}>{item.name}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── VAR CHECKLIST ────────────────────────────────────────────────────────────
+  function VarChecklist({ events, googleTagConfig }) {
+    const allVars = useMemo(() => {
+      const f = {}; events.forEach(ev => Object.assign(f, detectVariables(ev.params))); return f;
+    }, [events]);
+    const entries = Object.entries(allVars);
+    const showGtmConstant = googleTagConfig.include;
+
+    if (!entries.length && !showGtmConstant) return null;
+
+    return (
+      <div style={{ ...S.card, borderLeft:`4px solid ${ORANGE}`, marginBottom:"0.75rem" }}>
+        <p style={{...S.label, marginBottom:"0.5rem"}}>Variabler der skal eksistere i GTM</p>
+        <p style={{ fontSize:"0.75rem", color:"#888", marginBottom:"0.75rem", lineHeight:1.5 }}>
+          Eksisterende container-tilstand inkluderer ikke variabler i JSON. Bekræft at disse eksisterer:
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.4rem" }}>
+          {showGtmConstant && (
+            <div style={{ display:"flex", alignItems:"center", gap:"0.4rem", padding:"0.35rem 0.6rem", background:"#fff0e8", borderRadius:"6px", border:"1px solid #fde0c8" }}>
+              <span style={{ fontSize:"0.6rem", fontWeight:800, padding:"0.1rem 0.35rem", borderRadius:"3px", background:"#ffe0cc", color:ORANGE }}>Constant</span>
+              <span style={{ fontSize:"0.75rem", color:DARK, fontFamily:"monospace" }}>ga4 - measurement id</span>
+            </div>
+          )}
+          {entries.map(([syntax, def]) => (
+            <div key={syntax} style={{ display:"flex", alignItems:"center", gap:"0.4rem", padding:"0.35rem 0.6rem", background:"#f5f4f2", borderRadius:"6px" }}>
+              <span style={{ fontSize:"0.6rem", fontWeight:800, padding:"0.1rem 0.35rem", borderRadius:"3px",
+                background: def.type==="BUILT_IN"?"#e0f0ff": def.type==="DL_VAR"?"#e8f8e8": def.type==="CUSTOM_JS"?"#fff0e8":"#f0f0f0",
+                color: def.type==="BUILT_IN"?"#1a6fb5": def.type==="DL_VAR"?"#1a8c3a": def.type==="CUSTOM_JS"?ORANGE:"#666"
+              }}>
+                {def.type==="BUILT_IN"?"Built-in": def.type==="DL_VAR"?"DL Var": def.type==="CUSTOM_JS"?"Custom JS":"Constant"}
+              </span>
+              <span style={{ fontSize:"0.75rem", color:DARK, fontFamily:"monospace" }}>{def.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── EVENT CARD ───────────────────────────────────────────────────────────────
+  function EventCard({ ev, mode, onChange, onRemove, onDuplicate }) {
+    const upd = (f,v) => onChange({...ev,[f]:v});
+    const updParam = (id,f,v) => onChange({...ev,params:ev.params.map(p=>p.id===id?{...p,[f]:v}:p)});
+    const removeParam = (id) => onChange({...ev,params:ev.params.filter(p=>p.id!==id)});
+    const addParam = () => onChange({...ev,params:[...ev.params,{id:ev.nextParamId,name:"",value:""}],nextParamId:ev.nextParamId+1});
+
+    const handleSelect = (id) => {
+      const def = ALL_EVENTS.find(e=>e.id===id)||{id:"custom",name:"",tagName:"",triggerName:"",params:[]};
+      onChange({...ev,selectedId:id,eventName:def.name,tagName:def.tagName,triggerName:def.triggerName,
+        params:def.params.map((p,i)=>({id:i+1,...p})),nextParamId:def.params.length+2});
+    };
+
+    const singleJson = useMemo(() => JSON.stringify(buildGTMJson([ev], mode, {include:false,measurementId:"",sendPageView:true}), null, 2), [ev, mode]);
+    const detectedVars = useMemo(() => detectVariables(ev.params), [ev.params]);
+    const varCount = Object.keys(detectedVars).length;
+    const isValid = ev.eventName.trim().length > 0;
+
+    return (
+      <div className="event-card">
+        <div style={{ background:DARK, padding:"0.75rem 1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}
+          onClick={() => upd("collapsed", !ev.collapsed)}>
+          <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
+            <span style={{ fontSize:"0.85rem", fontWeight:800, color:ev.eventName?"white":"#666" }}>
+              {ev.eventName || "Custom event…"}
+            </span>
+            {ev.eventName && <>
+              <span className="badge" style={{ background:"#2a1a12", color:ORANGE }}>{ev.params.length} params</span>
+              {mode==="new" && varCount>0 && <span className="badge" style={{ background:"#1a2a1a", color:"#6dbf6d" }}>{varCount} vars</span>}
+              {mode==="existing" && <span className="badge" style={{ background:ev.includeTrigger?"#2a1a12":"#222", color:ev.includeTrigger?ORANGE:"#666" }}>
+                {ev.includeTrigger?"trigger ✓":"no trigger"}
+              </span>}
+            </>}
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+            <button onClick={e=>{e.stopPropagation();onDuplicate();}} style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem", borderRadius:"4px", fontWeight:700, border:"1px solid #444", cursor:"pointer", background:"transparent", color:"#aaa", fontFamily:"inherit" }}>Dupliker</button>
+            <button onClick={e=>{e.stopPropagation();onRemove();}} style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem", borderRadius:"4px", fontWeight:700, border:"1px solid #c0392b", cursor:"pointer", background:"transparent", color:"#e74c3c", fontFamily:"inherit" }}>Slet</button>
+            <span style={{ color:"#555", fontSize:"0.8rem" }}>{ev.collapsed?"▼":"▲"}</span>
+          </div>
+        </div>
+
+        {!ev.collapsed && (
+          <div style={{ padding:"1.25rem" }}>
+            <div style={{ display:"grid", gridTemplateColumns:ev.selectedId==="custom"?"1fr 1fr 1fr":"1fr 1fr", gap:"0.75rem", marginBottom:"0.75rem" }}>
+              <div>
+                <label style={S.label}>Event</label>
+                <select style={S.input} value={ev.selectedId} onChange={e=>handleSelect(e.target.value)}>
+                  {EVENTS_DATA.map(g=>(
+                    <optgroup key={g.group} label={g.group}>
+                      {g.events.map(e=><option key={e.id} value={e.id}>{e.name||"Custom…"}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Measurement ID</label>
+                <input style={{...S.input, fontFamily:"monospace", color:ev.measurementId.startsWith("{{")?ORANGE:DARK}} type="text" value={ev.measurementId} onChange={e=>upd("measurementId",e.target.value)} />
+              </div>
+              {ev.selectedId==="custom" && (
+                <div>
+                  <label style={S.label}>Event Name</label>
+                  <input style={S.input} type="text" value={ev.eventName}
+                    onChange={e=>{const v=e.target.value.toLowerCase();onChange({...ev,eventName:v,tagName:`ga4 - ${v}`,triggerName:`ce - ${v}`});}}
+                    placeholder="e.g. form_submit" />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:mode==="existing"?"1fr 1fr 1fr":"1fr 1fr", gap:"0.75rem", marginBottom:"0.75rem", alignItems:"flex-end" }}>
+              <div>
+                <label style={S.label}>Tag Name (GTM)</label>
+                <input style={S.input} type="text" value={ev.tagName} onChange={e=>upd("tagName",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>Trigger Name (GTM)</label>
+                <input style={S.input} type="text" value={ev.triggerName} onChange={e=>upd("triggerName",e.target.value)} />
+              </div>
+              {mode==="existing" && (
+                <div style={{ paddingBottom:"0.65rem" }}>
+                  <Toggle on={ev.includeTrigger} onChange={v=>upd("includeTrigger",v)} label="Inkluder trigger i JSON" />
+                </div>
+              )}
+            </div>
+
+            {/* Parameters */}
+            <div style={{ background:"#fafaf9", borderRadius:"8px", border:"1.5px solid #e8e6e2", overflow:"hidden", marginBottom:"0.75rem" }}>
+              <div style={{ padding:"0.5rem 1rem", background:"#f0ede9", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:"0.65rem", fontWeight:800, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em" }}>
+                  Parameters <span style={{ color:ORANGE }}>{ev.params.length}</span>
+                </span>
+                <button onClick={addParam} style={{ fontSize:"0.65rem", padding:"0.15rem 0.5rem", borderRadius:"4px", fontWeight:700, border:`1.5px solid ${ORANGE}`, cursor:"pointer", background:"transparent", color:ORANGE, fontFamily:"inherit" }}>+ Tilføj</button>
+              </div>
+              {ev.params.length===0 ? (
+                <p style={{ fontSize:"0.75rem", color:"#ccc", padding:"1rem", textAlign:"center" }}>Ingen parametre – vælg et event eller klik "+ Tilføj"</p>
+              ) : <>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 24px", gap:"0.5rem", padding:"0.35rem 1rem", borderBottom:"1px solid #e8e6e2" }}>
+                  <span style={{...S.label, marginBottom:0}}>Parameter</span>
+                  <span style={{...S.label, marginBottom:0}}>Værdi / GTM Variable</span>
+                  <span></span>
+                </div>
+                {ev.params.map((p,i)=>(
+                  <div key={p.id} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 24px", gap:"0.5rem", alignItems:"center", padding:"0.4rem 1rem", borderBottom:i<ev.params.length-1?"1px solid #f0ede9":"none" }}>
+                    <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem"}} type="text" value={p.name} onChange={e=>updParam(p.id,"name",e.target.value)} placeholder="event_action" />
+                    <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem",fontFamily:p.value.startsWith("{{")?'"Courier New",monospace':"inherit",color:p.value.startsWith("{{")?ORANGE:DARK}} type="text" value={p.value} onChange={e=>updParam(p.id,"value",e.target.value)} placeholder="{{Click Text}} eller hardcoded" />
+                    <button onClick={()=>removeParam(p.id)} style={{ background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:"1.1rem",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+                  </div>
+                ))}
+              </>}
+            </div>
+
+            {/* Auto vars preview */}
+            {mode==="new" && varCount>0 && (
+              <div style={{ background:"#f0faf0", border:"1.5px solid #c8eac8", borderRadius:"8px", padding:"0.75rem 1rem", marginBottom:"0.75rem" }}>
+                <p style={{...S.label, color:"#2a7a2a", marginBottom:"0.5rem"}}>Auto-genererede variabler</p>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"0.35rem" }}>
+                  {Object.entries(detectedVars).map(([syntax,def])=>(
+                    <span key={syntax} style={{ fontSize:"0.7rem", background:"white", border:"1px solid #c8eac8", borderRadius:"4px", padding:"0.15rem 0.4rem", fontFamily:"monospace", color:"#2a7a2a" }}>
+                      {def.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap" }}>
+              <button onClick={()=>upd("showJSON",!ev.showJSON)} style={{ fontSize:"0.75rem", padding:"0.4rem 0.75rem", borderRadius:"6px", fontWeight:700, border:"1.5px solid #e2e0dc", cursor:"pointer", background:"white", color:"#888", fontFamily:"inherit" }}>
+                {ev.showJSON?"▲ Skjul JSON":"▼ Vis JSON"}
+              </button>
+              <button disabled={!isValid}
+                onClick={()=>{ const b=new Blob([singleJson],{type:"application/json"}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=`gtm-${ev.eventName||"event"}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u); }}
+                style={{ fontSize:"0.75rem", padding:"0.4rem 0.75rem", borderRadius:"6px", fontWeight:700, border:"none", cursor:isValid?"pointer":"not-allowed", background:isValid?ORANGE:"#e0ddd9", color:"white", fontFamily:"inherit" }}>
+                ⬇ Download dette tag
+              </button>
+            </div>
+            {ev.showJSON && <pre className="json-preview">{singleJson}</pre>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── APP ──────────────────────────────────────────────────────────────────────
+  function App() {
+    const [mode, setMode] = useState("new");
+    const [googleTagConfig, setGoogleTagConfig] = useState({ include:true, measurementId:"", sendPageView:true });
+    const defaultDef = ALL_EVENTS.find(e=>e.id==="add_to_cart");
+    const [events, setEvents] = useState([makeEvent(defaultDef,"new")]);
+    const [downloadedAll, setDownloadedAll] = useState(false);
+
+    const updateMode = (m) => {
+      setMode(m);
+      setEvents(prev=>prev.map(ev=>({...ev,includeTrigger:m!=="existing"})));
+    };
+
+    const updateEvent = (u,updated) => setEvents(prev=>prev.map(e=>e.uid===u?updated:e));
+    const removeEvent = (u) => setEvents(prev=>prev.filter(e=>e.uid!==u));
+    const duplicateEvent = (u) => {
+      const ev=events.find(e=>e.uid===u); if(!ev) return;
+      const clone={...ev,uid:uid(),tagName:ev.tagName+" (kopi)",collapsed:false};
+      const idx=events.findIndex(e=>e.uid===u);
+      const next=[...events]; next.splice(idx+1,0,clone); setEvents(next);
+    };
+    const addEvent = () => { const def=ALL_EVENTS.find(e=>e.id==="add_to_cart"); setEvents(prev=>[...prev,makeEvent(def,mode)]); };
+
+    const validEvents = events.filter(e=>e.eventName.trim());
+    const allVars = useMemo(()=>{ const f={}; validEvents.forEach(ev=>Object.assign(f,detectVariables(ev.params))); return f; },[validEvents]);
+    const totalTriggers = mode==="new" ? validEvents.length : validEvents.filter(e=>e.includeTrigger).length;
+    const totalVars = mode==="new" ? Object.keys(allVars).length + (googleTagConfig.include ? 1 : 0) : 0;
+    const googleTagIncluded = googleTagConfig.include;
+
+    const downloadAll = () => {
+      if(!validEvents.length && !googleTagIncluded) return;
+      const json = JSON.stringify(buildGTMJson(validEvents, mode, googleTagConfig), null, 2);
+      const b=new Blob([json],{type:"application/json"});
+      const u=URL.createObjectURL(b); const a=document.createElement("a");
+      a.href=u; a.download=`gtm-calibrate-${mode}.json`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u);
+      setDownloadedAll(true); setTimeout(()=>setDownloadedAll(false),2000);
+    };
+
+    const canDownload = validEvents.length > 0 || googleTagIncluded;
+
+    return (
+      <div style={{ minHeight:"100vh", background:"#f5f4f2", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"2rem 1rem 3rem" }}>
+        <div style={{ width:"100%", maxWidth:"820px" }}>
+
+          {/* Title */}
+          <div style={{ marginBottom:"1.5rem" }}>
+            <h1 style={{ fontSize:"1.5rem", fontWeight:900, color:DARK, letterSpacing:"-0.03em" }}>GA4 Event Builder</h1>
+            <p style={{ fontSize:"0.875rem", color:"#888", marginTop:"0.35rem" }}>Generer GTM-tags, triggers og variabler klar til direkte import</p>
+            <div style={{ height:"3px", width:"40px", background:ORANGE, borderRadius:"2px", marginTop:"0.75rem" }} />
+          </div>
+
+          {/* Mode tabs */}
+          <div style={{ ...S.card, padding:0, marginBottom:"1rem" }}>
+            <div style={{ display:"flex", borderBottom:"1.5px solid #f0ede9", padding:"0 1.25rem" }}>
+              <button className={`tab-btn ${mode==="new"?"active":"inactive"}`} onClick={()=>updateMode("new")}>🆕 Ny container</button>
+              <button className={`tab-btn ${mode==="existing"?"active":"inactive"}`} onClick={()=>updateMode("existing")}>🔧 Eksisterende container</button>
+            </div>
+            <div style={{ padding:"0.75rem 1.25rem", background:"#fafaf9" }}>
+              {mode==="new" ? (
+                <p style={{ fontSize:"0.8rem", color:"#666", lineHeight:1.5 }}>
+                  <strong style={{color:DARK}}>Ny container:</strong> JSON indeholder Google Tag + Constant variabel, event tags, triggers og alle Data Layer-variabler auto-detekteret fra <code style={{fontFamily:"monospace",background:"#f0ede9",padding:"0 3px",borderRadius:3}}>{"{{...}}"}</code>-syntaxen.
+                </p>
+              ) : (
+                <p style={{ fontSize:"0.8rem", color:"#666", lineHeight:1.5 }}>
+                  <strong style={{color:DARK}}>Eksisterende container:</strong> JSON indeholder tags. Triggers og Google Tag er valgfrit. En tjekliste viser hvilke variabler der skal eksistere.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1rem" }}>
+            <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+              {googleTagIncluded && <span className="badge" style={{ background:"#fff0e8", border:"1.5px solid #fdd0b8", color:ORANGE, fontSize:"0.7rem", padding:"0.25rem 0.6rem" }}>Google Tag ✓</span>}
+              <span className="badge" style={{ background:"white", border:"1.5px solid #e8e6e2", color:DARK, fontSize:"0.7rem", padding:"0.25rem 0.5rem" }}>{validEvents.length} event tags</span>
+              <span className="badge" style={{ background:"white", border:"1.5px solid #e8e6e2", color:DARK, fontSize:"0.7rem", padding:"0.25rem 0.5rem" }}>{totalTriggers + (googleTagIncluded ? 1 : 0)} triggers</span>
+              {mode==="new" && <span className="badge" style={{ background:"white", border:"1.5px solid #c8eac8", color:"#2a7a2a", fontSize:"0.7rem", padding:"0.25rem 0.5rem" }}>{totalVars} vars</span>}
+            </div>
+            <button onClick={downloadAll} disabled={!canDownload}
+              style={{ padding:"0.6rem 1.25rem", background:canDownload?ORANGE:"#e0ddd9", color:"white", border:"none", borderRadius:"8px", fontSize:"0.85rem", fontWeight:800, cursor:canDownload?"pointer":"not-allowed", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+              {downloadedAll ? "✓ Downloadet!" : `⬇ Download alle`}
+            </button>
+          </div>
+
+          {/* Google Tag section */}
+          <div className="section-divider">
+            <div className="section-divider-line" />
+            <span className="section-divider-label">Konfigurationstag</span>
+            <div className="section-divider-line" />
+          </div>
+
+          <GoogleTagCard config={googleTagConfig} onChange={setGoogleTagConfig} mode={mode} />
+
+          {/* Event tags section */}
+          <div className="section-divider">
+            <div className="section-divider-line" />
+            <span className="section-divider-label">Event Tags</span>
+            <div className="section-divider-line" />
+          </div>
+
+          {mode==="existing" && <VarChecklist events={validEvents} googleTagConfig={googleTagConfig} />}
+
+          {events.map(ev=>(
+            <EventCard key={ev.uid} ev={ev} mode={mode}
+              onChange={updated=>updateEvent(ev.uid,updated)}
+              onRemove={()=>removeEvent(ev.uid)}
+              onDuplicate={()=>duplicateEvent(ev.uid)} />
+          ))}
+
+          <button className="add-btn" onClick={addEvent}>+ Tilføj nyt event</button>
+
+          {/* Import guide */}
+          <div style={{ ...S.card, borderLeft:`4px solid ${ORANGE}`, marginBottom:"0.75rem" }}>
+            <p style={{...S.label, marginBottom:"0.75rem"}}>Sådan importerer du i GTM</p>
+            {(mode==="new" ? [
+              ["1","Gå til Admin → Import Container"],
+              ["2","Upload den downloadede .json-fil"],
+              ["3","Vælg workspace → Merge → Rename conflicting tags"],
+              ["4","Preview og verificér Google Tag, event tags, triggers og variabler"],
+              ["5","Opdatér Constant-variablen 'ga4 - measurement id' med det korrekte G-ID hvis nødvendigt"],
+              ["6","Publish 🚀"]
+            ] : [
+              ["1","Gå til Admin → Import Container"],
+              ["2","Upload den downloadede .json-fil"],
+              ["3","Vælg workspace → Merge → Rename conflicting tags"],
+              ["4","Kobl tags manuelt på eksisterende triggers hvis trigger ikke var inkluderet"],
+              ["5","Bekræft at variabler fra tjeklisten eksisterer i containeren"],
+              ["6","Preview, verificér og publish 🚀"]
+            ]).map(([n,t])=>(
+              <div key={n} style={{ display:"flex", gap:"0.75rem", alignItems:"flex-start", marginBottom:"0.35rem" }}>
+                <span style={{ fontSize:"0.7rem", fontWeight:900, color:ORANGE, flexShrink:0 }}>{n}.</span>
+                <p style={{ fontSize:"0.8rem", color:"#555", lineHeight:1.5 }}>{t}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign:"center", marginTop:"1.5rem" }}>
+            <span style={{ fontSize:"0.7rem", color:"#bbb" }}>
+              <span style={{ color:ORANGE, fontWeight:900 }}>calibrate</span> · part of iO
+            </span>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>
