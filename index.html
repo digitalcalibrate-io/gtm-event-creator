@@ -19,7 +19,7 @@
     .badge-tool { font-size: 0.7rem; font-weight: 700; color: #E8501B; border: 1.5px solid #E8501B; padding: 0.2rem 0.6rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
     .json-preview { background: #111; color: #a8d8a0; border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.7rem; line-height: 1.6; overflow-x: auto; white-space: pre; max-height: 220px; overflow-y: auto; margin-top: 0.75rem; }
     button:active { transform: scale(0.97); }
-    .event-card { background: white; border-radius: 12px; border: 1.5px solid #e8e6e2; margin-bottom: 1rem; overflow: hidden; transition: box-shadow 0.15s; }
+    .event-card { background: white; border-radius: 10px; border: 1.5px solid #e8e6e2; margin-bottom: 0.75rem; overflow: hidden; transition: box-shadow 0.15s; }
     .event-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
     .tab-btn { padding: 0.5rem 1.25rem; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: transparent; transition: all 0.15s; border-bottom: 2px solid transparent; font-family: inherit; }
     .tab-btn.active { color: #E8501B; border-bottom: 2px solid #E8501B; }
@@ -28,13 +28,16 @@
     .toggle-track { width: 36px; height: 20px; border-radius: 10px; position: relative; transition: background 0.2s; flex-shrink: 0; }
     .toggle-thumb { width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
     .badge { font-size: 0.6rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .add-btn { width: 100%; padding: 0.875rem; background: transparent; color: #E8501B; border: 2px dashed #E8501B; border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; margin-bottom: 1rem; transition: all 0.15s; font-family: inherit; }
-    .add-btn:hover { background: #fff0eb; }
+    .add-event-btn { width: 100%; padding: 0.75rem; background: transparent; color: #E8501B; border: 2px dashed #E8501B; border-radius: 10px; font-size: 0.85rem; font-weight: 800; cursor: pointer; margin-top: 0.75rem; transition: all 0.15s; font-family: inherit; }
+    .add-event-btn:hover { background: #fff0eb; }
     .section-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 1rem; }
     .section-divider-line { flex: 1; height: 1px; background: #e8e6e2; }
     .section-divider-label { font-size: 0.65rem; font-weight: 800; color: #bbb; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
     .platform-card { background: white; border-radius: 12px; border: 1.5px solid #e8e6e2; margin-bottom: 1rem; overflow: hidden; }
-    .platform-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #1a1a1a 0%, #2a1a12 100%); }
+    .platform-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #1a1a1a 0%, #2a1a12 100%); cursor: pointer; }
+    .platform-body { padding: 1.25rem; }
+    .sub-section { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1.5px solid #f0ede9; }
+    .sub-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .conv-card { background: #fafaf9; border-radius: 8px; border: 1.5px solid #e8e6e2; margin-bottom: 0.6rem; overflow: hidden; }
     .conv-card-header { padding: 0.6rem 0.875rem; background: #f0ede9; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
   </style>
@@ -49,9 +52,8 @@
   const { useState, useMemo } = React;
   const ORANGE = "#E8501B";
   const DARK = "#1a1a1a";
-
   const CONSENT_INIT_ALL_PAGES = "2147479573";
-  const ALL_PAGES              = "2147479553";
+  const ALL_PAGES = "2147479553";
   const ECOMMERCE_EVENT_IDS = new Set(["view_item","add_to_cart","add_to_wishlist","view_cart","remove_from_cart","begin_checkout","purchase"]);
 
   const DEFAULT_ITEM_DIMS = [
@@ -65,27 +67,26 @@
     { id:8, param:"quantity",       value:"{{dlv - ecommerce.items.0.quantity}}" },
   ];
 
-  // Google Ads conversion presets
   const GADS_CONV_PRESETS = [
-    { id:"purchase",       label:"Purchase",        triggerName:"ce - purchase",      value:"{{dlv - ecommerce.value}}",    transactionId:"{{dlv - ecommerce.transaction_id}}", currency:"{{dlv - ecommerce.currency}}" },
-    { id:"begin_checkout", label:"Begin Checkout",  triggerName:"ce - begin_checkout",value:"{{dlv - ecommerce.value}}",    transactionId:"", currency:"{{dlv - ecommerce.currency}}" },
-    { id:"add_to_cart",    label:"Add to Cart",     triggerName:"ce - add_to_cart",   value:"{{dlv - ecommerce.value}}",    transactionId:"", currency:"{{dlv - ecommerce.currency}}" },
-    { id:"lead",           label:"Lead / Contact",  triggerName:"ce - generate_lead", value:"",                             transactionId:"", currency:"" },
-    { id:"signup",         label:"Sign Up",         triggerName:"ce - sign_up",       value:"",                             transactionId:"", currency:"" },
-    { id:"custom",         label:"Custom…",         triggerName:"",                   value:"",                             transactionId:"", currency:"" },
+    { id:"purchase",       label:"Purchase",       triggerName:"ce - purchase",       value:"{{dlv - ecommerce.value}}", transactionId:"{{dlv - ecommerce.transaction_id}}", currency:"{{dlv - ecommerce.currency}}" },
+    { id:"begin_checkout", label:"Begin Checkout", triggerName:"ce - begin_checkout", value:"{{dlv - ecommerce.value}}", transactionId:"", currency:"{{dlv - ecommerce.currency}}" },
+    { id:"add_to_cart",    label:"Add to Cart",    triggerName:"ce - add_to_cart",    value:"{{dlv - ecommerce.value}}", transactionId:"", currency:"{{dlv - ecommerce.currency}}" },
+    { id:"lead",           label:"Lead / Contact", triggerName:"ce - generate_lead",  value:"", transactionId:"", currency:"" },
+    { id:"signup",         label:"Sign Up",        triggerName:"ce - sign_up",        value:"", transactionId:"", currency:"" },
+    { id:"custom",         label:"Custom…",        triggerName:"",                    value:"", transactionId:"", currency:"" },
   ];
 
   const KNOWN_VARIABLES = {
-    "{{Click Text}}":        { type:"BUILT_IN", name:"Click Text",    builtInType:"CLICK_TEXT" },
-    "{{Click URL}}":         { type:"BUILT_IN", name:"Click URL",     builtInType:"CLICK_URL" },
-    "{{Page URL}}":          { type:"BUILT_IN", name:"Page URL",      builtInType:"PAGE_URL" },
-    "{{Page Hostname}}":     { type:"BUILT_IN", name:"Page Hostname", builtInType:"PAGE_HOSTNAME" },
-    "{{Page Path}}":         { type:"BUILT_IN", name:"Page Path",     builtInType:"PAGE_PATH" },
-    "{{Referrer}}":          { type:"BUILT_IN", name:"Referrer",      builtInType:"REFERRER" },
-    "{{Unique Event ID}}":   { type:"CUSTOM_JS", name:"Unique Event ID" },
-    "{{ga4 - measurement id}}":  { type:"CONSTANT", name:"ga4 - measurement id" },
-    "{{gads - conversion id}}":  { type:"CONSTANT", name:"gads - conversion id" },
-    "{{meta - dataset id}}":     { type:"CONSTANT", name:"meta - dataset id" },
+    "{{Click Text}}":       { type:"BUILT_IN", name:"Click Text",    builtInType:"CLICK_TEXT" },
+    "{{Click URL}}":        { type:"BUILT_IN", name:"Click URL",     builtInType:"CLICK_URL" },
+    "{{Page URL}}":         { type:"BUILT_IN", name:"Page URL",      builtInType:"PAGE_URL" },
+    "{{Page Hostname}}":    { type:"BUILT_IN", name:"Page Hostname", builtInType:"PAGE_HOSTNAME" },
+    "{{Page Path}}":        { type:"BUILT_IN", name:"Page Path",     builtInType:"PAGE_PATH" },
+    "{{Referrer}}":         { type:"BUILT_IN", name:"Referrer",      builtInType:"REFERRER" },
+    "{{Unique Event ID}}":  { type:"CUSTOM_JS", name:"Unique Event ID" },
+    "{{ga4 - measurement id}}": { type:"CONSTANT", name:"ga4 - measurement id" },
+    "{{gads - conversion id}}": { type:"CONSTANT", name:"gads - conversion id" },
+    "{{meta - dataset id}}":    { type:"CONSTANT", name:"meta - dataset id" },
   };
 
   function detectVariables(params) {
@@ -103,23 +104,21 @@
 
   const GA4_EVENTS = [
     { group:"Navigation", events:[
-      { id:"internal_links", name:"internal_links", tagName:"ga4 - internal links", triggerName:"jl - internal link", triggerType:"LINK_CLICK", isEcommerce:false,
-        params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"external_links", name:"external_links", tagName:"ga4 - external links", triggerName:"jl - external link", triggerType:"LINK_CLICK", isEcommerce:false,
-        params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"internal_links", name:"internal_links", tagName:"ga4 - internal links", triggerName:"jl - internal link", triggerType:"LINK_CLICK", isEcommerce:false, params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"external_links", name:"external_links", tagName:"ga4 - external links", triggerName:"jl - external link", triggerType:"LINK_CLICK", isEcommerce:false, params:[{name:"event_action",value:"{{Click Text}}"},{name:"event_category",value:"link"},{name:"event_label",value:"{{Click URL}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
     ]},
     { group:"E-commerce", events:[
-      { id:"view_item", name:"view_item", tagName:"ga4 - view_item", triggerName:"ce - view_item", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items.0}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"add_to_cart", name:"add_to_cart", tagName:"ga4 - add_to_cart", triggerName:"ce - add_to_cart", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"view_item",       name:"view_item",       tagName:"ga4 - view_item",       triggerName:"ce - view_item",       isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items.0}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"add_to_cart",     name:"add_to_cart",     tagName:"ga4 - add_to_cart",     triggerName:"ce - add_to_cart",     isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
       { id:"add_to_wishlist", name:"add_to_wishlist", tagName:"ga4 - add_to_wishlist", triggerName:"ce - add_to_wishlist", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"view_cart", name:"view_cart", tagName:"ga4 - view_cart", triggerName:"ce - view_cart", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"remove_from_cart", name:"remove_from_cart", tagName:"ga4 - remove_from_cart", triggerName:"ce - remove_from_cart", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"begin_checkout", name:"begin_checkout", tagName:"ga4 - begin_checkout", triggerName:"ce - begin_checkout", isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"purchase", name:"purchase", tagName:"ga4 - purchase", triggerName:"ce - purchase", isEcommerce:true, params:[{name:"transaction_id",value:"{{dlv - ecommerce.transaction_id}}"},{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"tax",value:"{{dlv - ecommerce.tax}}"},{name:"shipping",value:"{{dlv - ecommerce.shipping}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"coupon",value:"{{dlv - ecommerce.coupon}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"view_cart",       name:"view_cart",       tagName:"ga4 - view_cart",       triggerName:"ce - view_cart",       isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"remove_from_cart",name:"remove_from_cart",tagName:"ga4 - remove_from_cart",triggerName:"ce - remove_from_cart",isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"begin_checkout",  name:"begin_checkout",  tagName:"ga4 - begin_checkout",  triggerName:"ce - begin_checkout",  isEcommerce:true, params:[{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
+      { id:"purchase",        name:"purchase",        tagName:"ga4 - purchase",        triggerName:"ce - purchase",        isEcommerce:true, params:[{name:"transaction_id",value:"{{dlv - ecommerce.transaction_id}}"},{name:"items",value:"{{dlv - ecommerce.items}}"},{name:"value",value:"{{dlv - ecommerce.value}}"},{name:"tax",value:"{{dlv - ecommerce.tax}}"},{name:"shipping",value:"{{dlv - ecommerce.shipping}}"},{name:"currency",value:"{{dlv - ecommerce.currency}}"},{name:"coupon",value:"{{dlv - ecommerce.coupon}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
     ]},
     { group:"Engagement", events:[
       { id:"view_search_results", name:"view_search_results", tagName:"ga4 - view_search_results", triggerName:"ce - view_search_results", isEcommerce:false, params:[{name:"search_term",value:"{{dlv - ecommerce.search_term}}"},{name:"event_id",value:"{{Unique Event ID}}"}] },
-      { id:"time_on_site", name:"TimeOnSite", tagName:"ga4 - TimeOnSite", triggerName:"TOS 30 + 10limit", isEcommerce:false, params:[{name:"event_action",value:"{{lt - timerEventNumber}}"},{name:"event_category",value:"TOS"}] },
+      { id:"time_on_site",        name:"TimeOnSite",          tagName:"ga4 - TimeOnSite",          triggerName:"TOS 30 + 10limit",        isEcommerce:false, params:[{name:"event_action",value:"{{lt - timerEventNumber}}"},{name:"event_category",value:"TOS"}] },
     ]},
     { group:"Custom", events:[{ id:"custom", name:"", tagName:"", triggerName:"", isEcommerce:false, params:[] }]}
   ];
@@ -144,49 +143,36 @@
     const includeItemDims = isEcom && ev.includeItemDims && activeDims.length > 0;
     let allParams = [...ev.params];
     if (includeItemDims) {
-      const existingNames = new Set(allParams.map(p=>p.name));
-      activeDims.forEach(d => { if (d.param && !existingNames.has(d.param)) allParams.push({name:d.param,value:d.value}); });
+      const existing = new Set(allParams.map(p=>p.name));
+      activeDims.forEach(d => { if (d.param && !existing.has(d.param)) allParams.push({name:d.param,value:d.value}); });
     }
     const filtered = allParams.filter(p=>p.name.trim());
     const eventSettingsTable = filtered.map(p=>({type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:p.name},{type:"TEMPLATE",key:"parameterValue",value:p.value}]}));
     const tagParams = [];
     if (isEcom) { tagParams.push({type:"BOOLEAN",key:"sendEcommerceData",value:"true"}); tagParams.push({type:"TEMPLATE",key:"getEcommerceDataFrom",value:"dataLayer"}); }
-    else { tagParams.push({type:"BOOLEAN",key:"sendEcommerceData",value:"false"}); }
+    else tagParams.push({type:"BOOLEAN",key:"sendEcommerceData",value:"false"});
     tagParams.push({type:"LIST",key:"eventSettingsTable",list:eventSettingsTable});
     tagParams.push({type:"TEMPLATE",key:"eventName",value:ev.eventName});
     tagParams.push({type:"TEMPLATE",key:"measurementIdOverride",value:ev.measurementId});
     return { accountId:"0",containerId:"0",tagId:String(tagId),name:ev.tagName||`ga4 - ${ev.eventName}`,type:"gaawe",parameter:tagParams,tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+idx*10+1000),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"} };
   }
 
-  // ─── BUILD AWCT (Google Ads Conversion) TAG ───────────────────────────────
-  // Format verified from Harald Nyborg real GTM export
   function buildAWCTTag(conv, tagId, triggerId, fp, idx) {
     const params = [
-      { type:"BOOLEAN",  key:"enableNewCustomerReporting", value:"false" },
-      { type:"BOOLEAN",  key:"enableConversionLinker",     value:"true" },
-      { type:"BOOLEAN",  key:"enableProductReporting",     value:"false" },
-      { type:"TEMPLATE", key:"conversionId",               value:"{{gads - conversion id}}" },
-      { type:"TEMPLATE", key:"conversionLabel",            value:conv.conversionLabel },
-      { type:"BOOLEAN",  key:"rdp",                        value:"false" },
-      { type:"BOOLEAN",  key:"enableShippingData",         value:"false" },
+      {type:"BOOLEAN",key:"enableNewCustomerReporting",value:"false"},
+      {type:"BOOLEAN",key:"enableConversionLinker",value:"true"},
+      {type:"BOOLEAN",key:"enableProductReporting",value:"false"},
+      {type:"TEMPLATE",key:"conversionId",value:"{{gads - conversion id}}"},
+      {type:"TEMPLATE",key:"conversionLabel",value:conv.conversionLabel},
+      {type:"BOOLEAN",key:"rdp",value:"false"},
+      {type:"BOOLEAN",key:"enableShippingData",value:"false"},
     ];
-    if (conv.conversionValue.trim()) params.push({ type:"TEMPLATE", key:"conversionValue", value:conv.conversionValue });
-    if (conv.transactionId.trim())   params.push({ type:"TEMPLATE", key:"transactionId",   value:conv.transactionId });
-    if (conv.currencyCode.trim())    params.push({ type:"TEMPLATE", key:"currencyCode",     value:conv.currencyCode });
-    return {
-      accountId:"0",containerId:"0",tagId:String(tagId),
-      name:`gads - ${conv.conversionName||"conversion"}`,
-      type:"awct",parameter:params,
-      firingTriggerId:[String(triggerId)],
-      tagFiringOption:"ONCE_PER_EVENT",
-      fingerprint:String(fp+idx*10+2000),
-      monitoringMetadata:{type:"MAP"},
-      // NOT_NEEDED = Conversion Linker handles consent (verified from real export)
-      consentSettings:{consentStatus:"NOT_NEEDED"}
-    };
+    if (conv.conversionValue.trim()) params.push({type:"TEMPLATE",key:"conversionValue",value:conv.conversionValue});
+    if (conv.transactionId.trim())   params.push({type:"TEMPLATE",key:"transactionId",  value:conv.transactionId});
+    if (conv.currencyCode.trim())    params.push({type:"TEMPLATE",key:"currencyCode",    value:conv.currencyCode});
+    return { accountId:"0",containerId:"0",tagId:String(tagId),name:`gads - ${conv.conversionName||"conversion"}`,type:"awct",parameter:params,firingTriggerId:[String(triggerId)],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+idx*10+2000),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_NEEDED"} };
   }
 
-  // ─── BUILD GTM JSON ───────────────────────────────────────────────────────
   function buildGTMJson(ga4Events, mode, ga4Config, gadsConfig, metaConfig, globalItemDims) {
     const fp = Date.now();
     const now = new Date().toISOString().replace("T"," ").substring(0,19);
@@ -195,18 +181,9 @@
     let tagIdx=10, triggerIdx=200, varIdx=300;
     const usedBuiltIns = new Set();
 
-    function addDLVar(name, dlKey) {
-      if (variables.find(v=>v.name===name)) return;
-      variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"v",parameter:[{type:"INTEGER",key:"dataLayerVersion",value:"2"},{type:"BOOLEAN",key:"setDefaultValue",value:"false"},{type:"TEMPLATE",key:"name",value:dlKey}],fingerprint:String(fp+varIdx),formatValue:{}});
-    }
-    function addConstant(name, value) {
-      if (variables.find(v=>v.name===name)) return;
-      variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"c",parameter:[{type:"TEMPLATE",key:"value",value:value||""}],fingerprint:String(fp+varIdx),formatValue:{}});
-    }
-    function addCustomJS(name, code) {
-      if (variables.find(v=>v.name===name)) return;
-      variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"jsm",parameter:[{type:"TEMPLATE",key:"javascript",value:code}],fingerprint:String(fp+varIdx)});
-    }
+    function addDLVar(name, dlKey) { if (variables.find(v=>v.name===name)) return; variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"v",parameter:[{type:"INTEGER",key:"dataLayerVersion",value:"2"},{type:"BOOLEAN",key:"setDefaultValue",value:"false"},{type:"TEMPLATE",key:"name",value:dlKey}],fingerprint:String(fp+varIdx),formatValue:{}}); }
+    function addConstant(name, value) { if (variables.find(v=>v.name===name)) return; variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"c",parameter:[{type:"TEMPLATE",key:"value",value:value||""}],fingerprint:String(fp+varIdx),formatValue:{}}); }
+    function addCustomJS(name, code) { if (variables.find(v=>v.name===name)) return; variables.push({accountId:"0",containerId:"0",variableId:String(varIdx++),name,type:"jsm",parameter:[{type:"TEMPLATE",key:"javascript",value:code}],fingerprint:String(fp+varIdx)}); }
     function processVars(params) {
       Object.entries(detectVariables(params)||{}).forEach(([,def])=>{
         if (def.type==="BUILT_IN") usedBuiltIns.add(def.builtInType);
@@ -218,76 +195,11 @@
     // GA4 Google Tag
     if (ga4Config.include && ga4Config.measurementId.trim()) {
       if (isNew) { addConstant("ga4 - measurement id",ga4Config.measurementId.trim()); addCustomJS("Unique Event ID","function() { return Math.random().toString(36).substring(2)+Date.now().toString(36); }"); }
-      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"google tag - ga4",type:"googtag",
-        parameter:[{type:"TEMPLATE",key:"tagId",value:"{{ga4 - measurement id}}"},{type:"LIST",key:"configSettingsTable",list:[
-          {type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"send_page_view"},{type:"TEMPLATE",key:"parameterValue",value:ga4Config.sendPageView?"true":"false"}]},
-          {type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"page_location"},{type:"TEMPLATE",key:"parameterValue",value:"{{Page URL}}"}]},
-          {type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"page_referrer"},{type:"TEMPLATE",key:"parameterValue",value:"{{Referrer}}"}]},
-          {type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"event_id"},{type:"TEMPLATE",key:"parameterValue",value:"{{Unique Event ID}}"}]},
-        ]}],
-        firingTriggerId:[CONSENT_INIT_ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+1),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
+      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"google tag - ga4",type:"googtag",parameter:[{type:"TEMPLATE",key:"tagId",value:"{{ga4 - measurement id}}"},{type:"LIST",key:"configSettingsTable",list:[{type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"send_page_view"},{type:"TEMPLATE",key:"parameterValue",value:ga4Config.sendPageView?"true":"false"}]},{type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"page_location"},{type:"TEMPLATE",key:"parameterValue",value:"{{Page URL}}"}]},{type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"page_referrer"},{type:"TEMPLATE",key:"parameterValue",value:"{{Referrer}}"}]},{type:"MAP",map:[{type:"TEMPLATE",key:"parameter",value:"event_id"},{type:"TEMPLATE",key:"parameterValue",value:"{{Unique Event ID}}"}]}]}],firingTriggerId:[CONSENT_INIT_ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+1),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
       usedBuiltIns.add("PAGE_URL"); usedBuiltIns.add("PAGE_HOSTNAME"); usedBuiltIns.add("REFERRER");
     }
 
-    // Google Ads base tags
-    if (gadsConfig.include && gadsConfig.conversionId.trim()) {
-      if (isNew) addConstant("gads - conversion id",gadsConfig.conversionId.trim());
-      // Google Tag for GAds
-      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"google tag - gads",type:"googtag",
-        parameter:[{type:"TEMPLATE",key:"tagId",value:"{{gads - conversion id}}"}],
-        firingTriggerId:[CONSENT_INIT_ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+2),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
-      // Conversion Linker
-      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"Conversion Linker",type:"gclidw",
-        parameter:[{type:"BOOLEAN",key:"enableCrossDomain",value:"false"},{type:"BOOLEAN",key:"enableUrlPassthrough",value:"true"},{type:"BOOLEAN",key:"enableCookieOverrides",value:"false"}],
-        firingTriggerId:[ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+3),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
-      // Remarketing
-      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"gads - remarketing tag",type:"sp",
-        parameter:[{type:"BOOLEAN",key:"enableConversionLinker",value:"true"},{type:"BOOLEAN",key:"enableDynamicRemarketing",value:"false"},{type:"TEMPLATE",key:"conversionId",value:"{{gads - conversion id}}"},{type:"TEMPLATE",key:"customParamsFormat",value:"NONE"},{type:"BOOLEAN",key:"rdp",value:"false"}],
-        firingTriggerId:[ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+4),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
-
-      // Conversion tags (awct) – one per defined conversion
-      const ceTrigMap = {};
-      gadsConfig.conversions.filter(c=>c.conversionLabel.trim()).forEach((conv,idx)=>{
-        // Reuse existing trigger if same triggerName
-        let trId;
-        if (!conv.triggerName.trim()) { trId = null; }
-        else if (ceTrigMap[conv.triggerName]) { trId = ceTrigMap[conv.triggerName]; }
-        else {
-          trId = String(triggerIdx++);
-          ceTrigMap[conv.triggerName] = trId;
-          const evtName = conv.triggerName.replace("ce - ","");
-          triggers.push({accountId:"0",containerId:"0",triggerId:trId,name:conv.triggerName,type:"CUSTOM_EVENT",
-            customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:evtName}]}],
-            fingerprint:String(fp+500+idx)});
-        }
-        if (trId) {
-          const convTag = buildAWCTTag(conv, tagIdx++, trId, fp, idx);
-          tags.push(convTag);
-          // Add DL vars for value/transactionId/currency if present
-          if (isNew) processVars([{value:conv.conversionValue},{value:conv.transactionId},{value:conv.currencyCode}]);
-        }
-      });
-    }
-
-    // Meta
-    if (metaConfig.include && metaConfig.datasetId.trim()) {
-      if (isNew) addConstant("meta - dataset id",metaConfig.datasetId.trim());
-      const metaConsentTriggerId = String(triggerIdx++);
-      triggers.push({accountId:"0",containerId:"0",triggerId:metaConsentTriggerId,name:"cookie_consent_marketing",type:"CUSTOM_EVENT",customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:"cookie_consent_marketing"}]}],fingerprint:String(fp+201)});
-      const ceTrigMap2 = {};
-      metaConfig.events.filter(e=>e.enabled).forEach((evt,idx)=>{
-        const propsMap=evt.props.map(p=>({type:"MAP",map:[{type:"TEMPLATE",key:"name",value:p.name},{type:"TEMPLATE",key:"value",value:p.value}]}));
-        let firingId;
-        if (evt.triggerType==="consent") { firingId=metaConsentTriggerId; }
-        else { if (!ceTrigMap2[evt.triggerType]) { const trId=String(triggerIdx++); ceTrigMap2[evt.triggerType]=trId; triggers.push({accountId:"0",containerId:"0",triggerId:trId,name:evt.triggerType,type:"CUSTOM_EVENT",customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:evt.triggerType.replace("ce - ","")}]}],fingerprint:String(fp+300+idx)}); } firingId=ceTrigMap2[evt.triggerType]; }
-        tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:`meta - ${evt.name}`,type:"cvt_KFNBV",
-          parameter:[{type:"BOOLEAN",key:"disablePushState",value:"false"},{type:"TEMPLATE",key:"eventId",value:"{{Unique Event ID}}"},{type:"TEMPLATE",key:"eventNameStandard",value:evt.name},{type:"BOOLEAN",key:"dataLayerEventPush",value:"false"},{type:"LIST",key:"userDataList",list:[{type:"MAP",map:[{type:"TEMPLATE",key:"name",value:"em"},{type:"TEMPLATE",key:"value",value:""}]},{type:"MAP",map:[{type:"TEMPLATE",key:"name",value:"ph"},{type:"TEMPLATE",key:"value",value:""}]}]},{type:"TEMPLATE",key:"pixelIds",value:"{{meta - dataset id}}"},{type:"BOOLEAN",key:"objectPropertiesFromVariable",value:"false"},{type:"BOOLEAN",key:"enableDataLayerMapping",value:"true"},{type:"LIST",key:"objectPropertiesList",list:propsMap},{type:"TEMPLATE",key:"inheritEventName",value:"override"},{type:"BOOLEAN",key:"disableAutoConfig",value:"false"},{type:"BOOLEAN",key:"enableConsentMode",value:"true"},{type:"BOOLEAN",key:"enableParamBuilderSdk",value:"true"},{type:"BOOLEAN",key:"enableEdvancedMatching",value:"true"},{type:"BOOLEAN",key:"dpoLDU",value:"false"},{type:"TEMPLATE",key:"eventName",value:"standard"},{type:"BOOLEAN",key:"userDataFromVariable",value:"false"},{type:"BOOLEAN",key:"enableEventEnhancement",value:"false"}],
-          firingTriggerId:[firingId],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+400+idx),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NEEDED",consentType:{type:"LIST",list:[{type:"TEMPLATE",value:"ad_storage"}]}}});
-        if (isNew) processVars(evt.props.map(p=>({value:p.value})));
-      });
-    }
-
-    // GA4 event tags
+    // GA4 Event tags
     ga4Events.forEach((ev,idx)=>{
       if (!ev.eventName.trim()) return;
       if (isNew) { processVars(ev.params); const activeDims=ev.itemDimsOverride!==undefined?ev.itemDimsOverride:globalItemDims; if ((ev.isEcommerce||ECOMMERCE_EVENT_IDS.has(ev.eventName))&&ev.includeItemDims&&activeDims.length>0) processVars(activeDims.map(d=>({value:d.value}))); }
@@ -301,11 +213,44 @@
       tags.push(tag);
     });
 
+    // Google Ads
+    if (gadsConfig.include && gadsConfig.conversionId.trim()) {
+      if (isNew) addConstant("gads - conversion id",gadsConfig.conversionId.trim());
+      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"google tag - gads",type:"googtag",parameter:[{type:"TEMPLATE",key:"tagId",value:"{{gads - conversion id}}"}],firingTriggerId:[CONSENT_INIT_ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+2),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
+      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"Conversion Linker",type:"gclidw",parameter:[{type:"BOOLEAN",key:"enableCrossDomain",value:"false"},{type:"BOOLEAN",key:"enableUrlPassthrough",value:"true"},{type:"BOOLEAN",key:"enableCookieOverrides",value:"false"}],firingTriggerId:[ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+3),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
+      tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:"gads - remarketing tag",type:"sp",parameter:[{type:"BOOLEAN",key:"enableConversionLinker",value:"true"},{type:"BOOLEAN",key:"enableDynamicRemarketing",value:"false"},{type:"TEMPLATE",key:"conversionId",value:"{{gads - conversion id}}"},{type:"TEMPLATE",key:"customParamsFormat",value:"NONE"},{type:"BOOLEAN",key:"rdp",value:"false"}],firingTriggerId:[ALL_PAGES],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+4),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NOT_SET"}});
+      const ceTrigMap={};
+      gadsConfig.conversions.filter(c=>c.conversionLabel.trim()).forEach((conv,idx)=>{
+        let trId;
+        if (!conv.triggerName.trim()) return;
+        if (ceTrigMap[conv.triggerName]) { trId=ceTrigMap[conv.triggerName]; }
+        else { trId=String(triggerIdx++); ceTrigMap[conv.triggerName]=trId; const evtName=conv.triggerName.replace("ce - ",""); triggers.push({accountId:"0",containerId:"0",triggerId:trId,name:conv.triggerName,type:"CUSTOM_EVENT",customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:evtName}]}],fingerprint:String(fp+500+idx)}); }
+        tags.push(buildAWCTTag(conv,tagIdx++,trId,fp,idx));
+        if (isNew) processVars([{value:conv.conversionValue},{value:conv.transactionId},{value:conv.currencyCode}]);
+      });
+    }
+
+    // Meta
+    if (metaConfig.include && metaConfig.datasetId.trim()) {
+      if (isNew) addConstant("meta - dataset id",metaConfig.datasetId.trim());
+      const metaConsentTriggerId=String(triggerIdx++);
+      triggers.push({accountId:"0",containerId:"0",triggerId:metaConsentTriggerId,name:"cookie_consent_marketing",type:"CUSTOM_EVENT",customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:"cookie_consent_marketing"}]}],fingerprint:String(fp+201)});
+      const ceTrigMap2={};
+      metaConfig.events.filter(e=>e.enabled).forEach((evt,idx)=>{
+        const propsMap=evt.props.map(p=>({type:"MAP",map:[{type:"TEMPLATE",key:"name",value:p.name},{type:"TEMPLATE",key:"value",value:p.value}]}));
+        let firingId;
+        if (evt.triggerType==="consent") firingId=metaConsentTriggerId;
+        else { if (!ceTrigMap2[evt.triggerType]) { const trId=String(triggerIdx++); ceTrigMap2[evt.triggerType]=trId; triggers.push({accountId:"0",containerId:"0",triggerId:trId,name:evt.triggerType,type:"CUSTOM_EVENT",customEventFilter:[{type:"EQUALS",parameter:[{type:"TEMPLATE",key:"arg0",value:"{{_event}}"},{type:"TEMPLATE",key:"arg1",value:evt.triggerType.replace("ce - ","")}]}],fingerprint:String(fp+300+idx)}); } firingId=ceTrigMap2[evt.triggerType]; }
+        tags.push({accountId:"0",containerId:"0",tagId:String(tagIdx++),name:`meta - ${evt.name}`,type:"cvt_KFNBV",parameter:[{type:"BOOLEAN",key:"disablePushState",value:"false"},{type:"TEMPLATE",key:"eventId",value:"{{Unique Event ID}}"},{type:"TEMPLATE",key:"eventNameStandard",value:evt.name},{type:"BOOLEAN",key:"dataLayerEventPush",value:"false"},{type:"LIST",key:"userDataList",list:[{type:"MAP",map:[{type:"TEMPLATE",key:"name",value:"em"},{type:"TEMPLATE",key:"value",value:""}]},{type:"MAP",map:[{type:"TEMPLATE",key:"name",value:"ph"},{type:"TEMPLATE",key:"value",value:""}]}]},{type:"TEMPLATE",key:"pixelIds",value:"{{meta - dataset id}}"},{type:"BOOLEAN",key:"objectPropertiesFromVariable",value:"false"},{type:"BOOLEAN",key:"enableDataLayerMapping",value:"true"},{type:"LIST",key:"objectPropertiesList",list:propsMap},{type:"TEMPLATE",key:"inheritEventName",value:"override"},{type:"BOOLEAN",key:"disableAutoConfig",value:"false"},{type:"BOOLEAN",key:"enableConsentMode",value:"true"},{type:"BOOLEAN",key:"enableParamBuilderSdk",value:"true"},{type:"BOOLEAN",key:"enableEdvancedMatching",value:"true"},{type:"BOOLEAN",key:"dpoLDU",value:"false"},{type:"TEMPLATE",key:"eventName",value:"standard"},{type:"BOOLEAN",key:"userDataFromVariable",value:"false"},{type:"BOOLEAN",key:"enableEventEnhancement",value:"false"}],firingTriggerId:[firingId],tagFiringOption:"ONCE_PER_EVENT",fingerprint:String(fp+400+idx),monitoringMetadata:{type:"MAP"},consentSettings:{consentStatus:"NEEDED",consentType:{type:"LIST",list:[{type:"TEMPLATE",value:"ad_storage"}]}}});
+        if (isNew) processVars(evt.props.map(p=>({value:p.value})));
+      });
+    }
+
     if (isNew) {
       const bNames={PAGE_URL:"Page URL",PAGE_HOSTNAME:"Page Hostname",PAGE_PATH:"Page Path",PAGE_TITLE:"Page Title",CLICK_TEXT:"Click Text",CLICK_URL:"Click URL",REFERRER:"Referrer"};
       usedBuiltIns.forEach(t=>{ if(!builtInVars.find(b=>b.type===t)) builtInVars.push({type:t,accountId:"0",containerId:"0",name:bNames[t]||t}); });
     }
-    return { exportFormatVersion:2,exportTime:now, containerVersion:{ path:"accounts/0/containers/0/versions/0",accountId:"0",containerId:"0",containerVersionId:"0", container:{path:"accounts/0/containers/0",accountId:"0",containerId:"0",name:"Calibrate GA4 Export",publicId:"GTM-CALIB0",usageContext:["WEB"],fingerprint:String(fp),features:{supportUserPermissions:true,supportEnvironments:true,supportWorkspaces:true,supportGtagConfigs:false,supportBuiltInVariables:true,supportClients:false,supportFolders:true,supportTags:true,supportTemplates:true,supportTriggers:true,supportVariables:true,supportVersions:true,supportZones:true,supportTransformations:false},tagIds:["GTM-CALIB0"],tagManagerUrl:"https://tagmanager.google.com/#/container/accounts/0/containers/0/workspaces/2"}, tag:tags,trigger:triggers,variable:variables,builtInVariable:builtInVars,folder:[],fingerprint:String(fp+9999) } };
+    return { exportFormatVersion:2,exportTime:now,containerVersion:{ path:"accounts/0/containers/0/versions/0",accountId:"0",containerId:"0",containerVersionId:"0",container:{path:"accounts/0/containers/0",accountId:"0",containerId:"0",name:"Calibrate GA4 Export",publicId:"GTM-CALIB0",usageContext:["WEB"],fingerprint:String(fp),features:{supportUserPermissions:true,supportEnvironments:true,supportWorkspaces:true,supportGtagConfigs:false,supportBuiltInVariables:true,supportClients:false,supportFolders:true,supportTags:true,supportTemplates:true,supportTriggers:true,supportVariables:true,supportVersions:true,supportZones:true,supportTransformations:false},tagIds:["GTM-CALIB0"],tagManagerUrl:"https://tagmanager.google.com/#/container/accounts/0/containers/0/workspaces/2"},tag:tags,trigger:triggers,variable:variables,builtInVariable:builtInVars,folder:[],fingerprint:String(fp+9999) } };
   }
 
   const S={input:{width:"100%",border:"1.5px solid #e2e0dc",borderRadius:"8px",padding:"0.6rem 0.85rem",fontSize:"0.85rem",color:DARK,background:"white",fontFamily:"inherit"},label:{display:"block",fontSize:"0.65rem",fontWeight:800,color:"#999",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"0.3rem"},card:{background:"white",borderRadius:"12px",border:"1.5px solid #e8e6e2",padding:"1.25rem",marginBottom:"0.75rem"}};
@@ -315,10 +260,9 @@
     const isEcom=def.isEcommerce||ECOMMERCE_EVENT_IDS.has(def.name||"");
     return {uid:uid(),selectedId:def.id,eventName:def.name||"",tagName:def.tagName||"",triggerName:def.triggerName||"",triggerType:def.triggerType||"CUSTOM_EVENT",isEcommerce:isEcom,includeItemDims:isEcom,itemDimsOverride:undefined,measurementId:"{{ga4 - measurement id}}",params:def.params.map((p,i)=>({id:i+1,...p})),nextParamId:def.params.length+2,collapsed:false,showJSON:false,includeTrigger:mode!=="existing"};
   }
-
-  function makeConversion(presetId="purchase") {
-    const preset = GADS_CONV_PRESETS.find(p=>p.id===presetId) || GADS_CONV_PRESETS[0];
-    return { uid:uid(), presetId, conversionName:preset.label, conversionLabel:"", triggerName:preset.triggerName, conversionValue:preset.value, transactionId:preset.transactionId, currencyCode:preset.currency, collapsed:false };
+  function makeConversion(presetId="purchase"){
+    const p=GADS_CONV_PRESETS.find(x=>x.id===presetId)||GADS_CONV_PRESETS[0];
+    return {uid:uid(),presetId,conversionName:p.label,conversionLabel:"",triggerName:p.triggerName,conversionValue:p.value,transactionId:p.transactionId,currencyCode:p.currency,collapsed:false};
   }
 
   function Toggle({on,onChange,label,small}){
@@ -328,32 +272,59 @@
     </div>;
   }
 
-  function PlatformCard({title,color,icon,children,enabled,onToggle}){
+  // ─── PLATFORM CARD – collapsible ──────────────────────────────────────────
+  function PlatformCard({title,color,icon,children,enabled,onToggle,collapsed,onCollapse,badge}){
     return <div className="platform-card">
-      <div className="platform-header">
+      <div className="platform-header" onClick={onCollapse}>
         <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
           <div style={{width:28,height:28,background:color,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:"0.75rem",fontWeight:900,color:"white"}}>{icon}</span></div>
-          <p style={{fontSize:"0.85rem",fontWeight:800,color:"white"}}>{title}</p>
+          <div>
+            <p style={{fontSize:"0.85rem",fontWeight:800,color:"white"}}>{title}</p>
+            {badge&&<p style={{fontSize:"0.65rem",color:"#aaa",marginTop:"1px"}}>{badge}</p>}
+          </div>
         </div>
-        <Toggle on={enabled} onChange={onToggle} label="Inkluder"/>
+        <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
+          <Toggle on={enabled} onChange={e=>{e; onToggle(!enabled);}} label="Inkluder"/>
+          <span style={{color:"#555",fontSize:"0.75rem"}}>{collapsed?"▼":"▲"}</span>
+        </div>
       </div>
-      {enabled&&<div style={{padding:"1.25rem"}}>{children}</div>}
+      {!collapsed&&<div className="platform-body">{children}</div>}
     </div>;
   }
 
-  // ─── GOOGLE ADS CONVERSION CARD ───────────────────────────────────────────
-  function ConversionCard({conv, onChange, onRemove}){
+  // ─── GLOBAL ITEM DIMS TEMPLATE ────────────────────────────────────────────
+  function GlobalItemDimsTemplate({dims,onChange}){
+    let nid=dims.length>0?Math.max(...dims.map(d=>d.id))+1:20;
+    const upd=(id,f,v)=>onChange(dims.map(d=>d.id===id?{...d,[f]:v}:d));
+    const rem=(id)=>onChange(dims.filter(d=>d.id!==id));
+    const add=()=>onChange([...dims,{id:nid++,param:"",value:""}]);
+    return <div style={{marginTop:"1rem",background:"#fafaf9",borderRadius:"10px",border:"1.5px solid #e8e6e2",overflow:"hidden"}}>
+      <div style={{padding:"0.6rem 1rem",background:"#f0ede9",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><span style={{fontSize:"0.65rem",fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Item Dimensions Skabelon</span><span style={{fontSize:"0.65rem",color:"#aaa",marginLeft:"0.5rem"}}>· aktiveres per event</span></div>
+        <button onClick={add} style={{fontSize:"0.65rem",padding:"0.15rem 0.5rem",borderRadius:"4px",fontWeight:700,border:`1.5px solid ${ORANGE}`,cursor:"pointer",background:"transparent",color:ORANGE,fontFamily:"inherit"}}>+ Tilføj</button>
+      </div>
+      <div style={{padding:"0.5rem 1rem 0.25rem"}}><div style={{background:"#e8f8e8",border:"1px solid #c8eac8",borderRadius:"6px",padding:"0.4rem 0.75rem",marginBottom:"0.5rem"}}><p style={{fontSize:"0.72rem",color:"#1a6b2a",lineHeight:1.5}}>Tilføjes som event-parametre på ecommerce-events med "Item dims" slået til. Kræver event-scoped <strong>custom dimensions i GA4</strong>.</p></div></div>
+      {dims.length>0&&<>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",padding:"0.25rem 1rem",borderBottom:"1px solid #e8e6e2"}}><span style={{...S.label,marginBottom:0,fontSize:"0.6rem"}}>GA4 Parameter</span><span style={{...S.label,marginBottom:0,fontSize:"0.6rem"}}>GTM Variable</span><span></span></div>
+        {dims.map((d,i)=><div key={d.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",alignItems:"center",padding:"0.35rem 1rem",borderBottom:i<dims.length-1?"1px solid #f0ede9":"none"}}>
+          <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem"}} type="text" value={d.param} onChange={e=>upd(d.id,"param",e.target.value)} placeholder="item_name"/>
+          <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem",fontFamily:d.value.startsWith("{{")?'"Courier New",monospace':"inherit",color:d.value.startsWith("{{")?ORANGE:DARK}} type="text" value={d.value} onChange={e=>upd(d.id,"value",e.target.value)} placeholder="{{dlv - ecommerce.items.0.item_name}}"/>
+          <button onClick={()=>rem(d.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:"1.1rem",lineHeight:1}}>×</button>
+        </div>)}
+      </>}
+    </div>;
+  }
+
+  // ─── CONVERSION CARD ──────────────────────────────────────────────────────
+  function ConversionCard({conv,onChange,onRemove}){
     const upd=(f,v)=>onChange({...conv,[f]:v});
-    const isValid = conv.conversionLabel.trim().length > 0;
-    const handlePreset=(id)=>{
-      const p=GADS_CONV_PRESETS.find(x=>x.id===id)||GADS_CONV_PRESETS[0];
-      onChange({...conv,presetId:id,conversionName:p.id==="custom"?conv.conversionName:p.label,triggerName:p.triggerName,conversionValue:p.value,transactionId:p.transactionId,currencyCode:p.currency});
-    };
+    const isValid=conv.conversionLabel.trim().length>0;
+    const handlePreset=(id)=>{ const p=GADS_CONV_PRESETS.find(x=>x.id===id)||GADS_CONV_PRESETS[0]; onChange({...conv,presetId:id,conversionName:p.id==="custom"?conv.conversionName:p.label,triggerName:p.triggerName,conversionValue:p.value,transactionId:p.transactionId,currencyCode:p.currency}); };
     return <div className="conv-card">
       <div className="conv-card-header" onClick={()=>upd("collapsed",!conv.collapsed)}>
         <div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}>
           <span style={{fontSize:"0.8rem",fontWeight:700,color:DARK}}>{conv.conversionName||"Ny konvertering"}</span>
-          {conv.conversionLabel&&<span className="badge" style={{background:"#e8f0ff",color:"#1a3fbf"}}>{conv.conversionLabel.substring(0,12)}{conv.conversionLabel.length>12?"…":""}</span>}
+          {conv.conversionLabel&&<span className="badge" style={{background:"#e8f0ff",color:"#1a3fbf"}}>{conv.conversionLabel.substring(0,14)}{conv.conversionLabel.length>14?"…":""}</span>}
           {!isValid&&<span className="badge" style={{background:"#fff0e8",color:ORANGE}}>label mangler</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>
@@ -363,70 +334,24 @@
       </div>
       {!conv.collapsed&&<div style={{padding:"0.875rem"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.6rem",marginBottom:"0.6rem"}}>
-          <div>
-            <label style={S.label}>Event Type</label>
-            <select style={S.input} value={conv.presetId} onChange={e=>handlePreset(e.target.value)}>
-              {GADS_CONV_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={S.label}>Tag Name</label>
-            <input style={S.input} type="text" value={conv.conversionName} onChange={e=>upd("conversionName",e.target.value)} placeholder="gads - purchase"/>
-          </div>
+          <div><label style={S.label}>Event Type</label><select style={S.input} value={conv.presetId} onChange={e=>handlePreset(e.target.value)}>{GADS_CONV_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
+          <div><label style={S.label}>Tag Name</label><input style={S.input} type="text" value={conv.conversionName} onChange={e=>upd("conversionName",e.target.value)} placeholder="gads - purchase"/></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.6rem",marginBottom:"0.6rem"}}>
-          <div>
-            <label style={{...S.label,color:ORANGE}}>Conversion Label *</label>
-            <input style={{...S.input,fontFamily:"monospace",borderColor:conv.conversionLabel?"#e2e0dc":ORANGE}} type="text" value={conv.conversionLabel} onChange={e=>upd("conversionLabel",e.target.value)} placeholder="ABC123def456_gXxx"/>
-          </div>
-          <div>
-            <label style={S.label}>Trigger Name</label>
-            <input style={S.input} type="text" value={conv.triggerName} onChange={e=>upd("triggerName",e.target.value)} placeholder="ce - purchase"/>
-          </div>
+          <div><label style={{...S.label,color:ORANGE}}>Conversion Label *</label><input style={{...S.input,fontFamily:"monospace",borderColor:conv.conversionLabel?"#e2e0dc":ORANGE}} type="text" value={conv.conversionLabel} onChange={e=>upd("conversionLabel",e.target.value)} placeholder="ABC123def456_gXxx"/></div>
+          <div><label style={S.label}>Trigger Name</label><input style={S.input} type="text" value={conv.triggerName} onChange={e=>upd("triggerName",e.target.value)} placeholder="ce - purchase"/></div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"0.6rem"}}>
-          <div>
-            <label style={S.label}>Conversion Value</label>
-            <input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.conversionValue.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.conversionValue.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.conversionValue} onChange={e=>upd("conversionValue",e.target.value)} placeholder="{{dlv - ecommerce.value}}"/>
-          </div>
-          <div>
-            <label style={S.label}>Transaction ID</label>
-            <input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.transactionId.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.transactionId.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.transactionId} onChange={e=>upd("transactionId",e.target.value)} placeholder="{{dlv - ecommerce.transaction_id}}"/>
-          </div>
-          <div>
-            <label style={S.label}>Currency</label>
-            <input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.currencyCode.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.currencyCode.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.currencyCode} onChange={e=>upd("currencyCode",e.target.value)} placeholder="{{dlv - ecommerce.currency}}"/>
-          </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"0.6rem",marginBottom:"0.6rem"}}>
+          <div><label style={S.label}>Conversion Value</label><input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.conversionValue.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.conversionValue.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.conversionValue} onChange={e=>upd("conversionValue",e.target.value)} placeholder="{{dlv - ecommerce.value}}"/></div>
+          <div><label style={S.label}>Transaction ID</label><input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.transactionId.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.transactionId.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.transactionId} onChange={e=>upd("transactionId",e.target.value)} placeholder="{{dlv - ecommerce.transaction_id}}"/></div>
+          <div><label style={S.label}>Currency</label><input style={{...S.input,fontSize:"0.78rem",fontFamily:conv.currencyCode.startsWith("{{")?'"Courier New",monospace':"inherit",color:conv.currencyCode.startsWith("{{")?ORANGE:DARK}} type="text" value={conv.currencyCode} onChange={e=>upd("currencyCode",e.target.value)} placeholder="{{dlv - ecommerce.currency}}"/></div>
         </div>
-        <div style={{marginTop:"0.6rem",background:"#e8f0ff",borderRadius:"6px",padding:"0.4rem 0.6rem"}}>
-          <p style={{fontSize:"0.7rem",color:"#1a3fbf",lineHeight:1.4}}>Find Conversion Label i Google Ads: Tools → Conversions → vælg konvertering → Tag setup → Use Google Tag Manager → se "Conversion label"</p>
-        </div>
+        <div style={{background:"#e8f0ff",borderRadius:"6px",padding:"0.4rem 0.6rem"}}><p style={{fontSize:"0.7rem",color:"#1a3fbf",lineHeight:1.4}}>Find Conversion Label i Google Ads: Tools → Conversions → vælg konvertering → Tag setup → Use Google Tag Manager</p></div>
       </div>}
     </div>;
   }
 
-  function GlobalItemDimsTemplate({dims,onChange}){
-    let nextId=dims.length>0?Math.max(...dims.map(d=>d.id))+1:20;
-    const updateDim=(id,f,v)=>onChange(dims.map(d=>d.id===id?{...d,[f]:v}:d));
-    const removeDim=(id)=>onChange(dims.filter(d=>d.id!==id));
-    const addDim=()=>onChange([...dims,{id:nextId++,param:"",value:""}]);
-    return <div style={{marginTop:"1rem",background:"#fafaf9",borderRadius:"10px",border:"1.5px solid #e8e6e2",overflow:"hidden"}}>
-      <div style={{padding:"0.6rem 1rem",background:"#f0ede9",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div><span style={{fontSize:"0.65rem",fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Item Dimensions Skabelon</span><span style={{fontSize:"0.65rem",color:"#aaa",marginLeft:"0.5rem"}}>· aktiveres per event</span></div>
-        <button onClick={addDim} style={{fontSize:"0.65rem",padding:"0.15rem 0.5rem",borderRadius:"4px",fontWeight:700,border:`1.5px solid ${ORANGE}`,cursor:"pointer",background:"transparent",color:ORANGE,fontFamily:"inherit"}}>+ Tilføj</button>
-      </div>
-      <div style={{padding:"0.5rem 1rem 0.25rem"}}><div style={{background:"#e8f8e8",border:"1px solid #c8eac8",borderRadius:"6px",padding:"0.4rem 0.75rem",marginBottom:"0.5rem"}}><p style={{fontSize:"0.72rem",color:"#1a6b2a",lineHeight:1.5}}>Disse dimensioner tilføjes som event-parametre på ecommerce-events der har "Item dims" slået til. Kræver event-scoped <strong>custom dimensions i GA4</strong> per parameter.</p></div></div>
-      {dims.length>0&&<>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",padding:"0.25rem 1rem",borderBottom:"1px solid #e8e6e2"}}><span style={{...S.label,marginBottom:0,fontSize:"0.6rem"}}>GA4 Parameter</span><span style={{...S.label,marginBottom:0,fontSize:"0.6rem"}}>GTM Variable</span><span></span></div>
-        {dims.map((d,i)=><div key={d.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",alignItems:"center",padding:"0.35rem 1rem",borderBottom:i<dims.length-1?"1px solid #f0ede9":"none"}}>
-          <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem"}} type="text" value={d.param} onChange={e=>updateDim(d.id,"param",e.target.value)} placeholder="item_name"/>
-          <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem",fontFamily:d.value.startsWith("{{")?'"Courier New",monospace':"inherit",color:d.value.startsWith("{{")?ORANGE:DARK}} type="text" value={d.value} onChange={e=>updateDim(d.id,"value",e.target.value)} placeholder="{{dlv - ecommerce.items.0.item_name}}"/>
-          <button onClick={()=>removeDim(d.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:"1.1rem",lineHeight:1}}>×</button>
-        </div>)}
-      </>}
-    </div>;
-  }
-
+  // ─── META EVENTS SELECTOR ─────────────────────────────────────────────────
   function MetaEventsSelector({events,onChange}){
     const toggle=(id)=>onChange(events.map(e=>e.id===id?{...e,enabled:!e.enabled}:e));
     return <div style={{marginTop:"0.75rem"}}><label style={S.label}>Events</label>
@@ -439,13 +364,14 @@
     </div>;
   }
 
+  // ─── VAR CHECKLIST ────────────────────────────────────────────────────────
   function VarChecklist({ga4Events,ga4Config,gadsConfig,metaConfig,globalItemDims}){
     const items=[];
     if(ga4Config.include) items.push({name:"ga4 - measurement id",type:"Constant"},{name:"Unique Event ID",type:"Custom JS"});
     if(gadsConfig.include) items.push({name:"gads - conversion id",type:"Constant"});
     if(metaConfig.include) items.push({name:"meta - dataset id",type:"Constant"});
     const allVars={};
-    ga4Events.filter(e=>e.eventName).forEach(ev=>{ Object.assign(allVars,detectVariables(ev.params)); const activeDims=ev.itemDimsOverride!==undefined?ev.itemDimsOverride:globalItemDims; if ((ev.isEcommerce||ECOMMERCE_EVENT_IDS.has(ev.eventName))&&ev.includeItemDims) Object.assign(allVars,detectVariables(activeDims.map(d=>({value:d.value})))); });
+    ga4Events.filter(e=>e.eventName).forEach(ev=>{ Object.assign(allVars,detectVariables(ev.params)); const ad=ev.itemDimsOverride!==undefined?ev.itemDimsOverride:globalItemDims; if ((ev.isEcommerce||ECOMMERCE_EVENT_IDS.has(ev.eventName))&&ev.includeItemDims) Object.assign(allVars,detectVariables(ad.map(d=>({value:d.value})))); });
     if(gadsConfig.include) gadsConfig.conversions.forEach(c=>Object.assign(allVars,detectVariables([{value:c.conversionValue},{value:c.transactionId},{value:c.currencyCode}])));
     Object.entries(allVars).forEach(([,d])=>{ if(d.type==="DL_VAR") items.push({name:d.name,type:"DL Variable"}); });
     if(!items.length) return null;
@@ -461,16 +387,13 @@
     </div>;
   }
 
+  // ─── GA4 EVENT CARD ───────────────────────────────────────────────────────
   function EventCard({ev,mode,onChange,onRemove,onDuplicate,globalItemDims}){
     const upd=(f,v)=>onChange({...ev,[f]:v});
     const updParam=(id,f,v)=>onChange({...ev,params:ev.params.map(p=>p.id===id?{...p,[f]:v}:p)});
     const removeParam=(id)=>onChange({...ev,params:ev.params.filter(p=>p.id!==id)});
     const addParam=()=>onChange({...ev,params:[...ev.params,{id:ev.nextParamId,name:"",value:""}],nextParamId:ev.nextParamId+1});
-    const handleSelect=(id)=>{
-      const def=ALL_GA4_EVENTS.find(e=>e.id===id)||{id:"custom",name:"",tagName:"",triggerName:"",isEcommerce:false,params:[]};
-      const isEcom=def.isEcommerce||ECOMMERCE_EVENT_IDS.has(def.name||"");
-      onChange({...ev,selectedId:id,eventName:def.name,tagName:def.tagName,triggerName:def.triggerName,triggerType:def.triggerType||"CUSTOM_EVENT",isEcommerce:isEcom,includeItemDims:isEcom,params:def.params.map((p,i)=>({id:i+1,...p})),nextParamId:def.params.length+2});
-    };
+    const handleSelect=(id)=>{ const def=ALL_GA4_EVENTS.find(e=>e.id===id)||{id:"custom",name:"",tagName:"",triggerName:"",isEcommerce:false,params:[]}; const isEcom=def.isEcommerce||ECOMMERCE_EVENT_IDS.has(def.name||""); onChange({...ev,selectedId:id,eventName:def.name,tagName:def.tagName,triggerName:def.triggerName,triggerType:def.triggerType||"CUSTOM_EVENT",isEcommerce:isEcom,includeItemDims:isEcom,params:def.params.map((p,i)=>({id:i+1,...p})),nextParamId:def.params.length+2}); };
     const isEcom=ev.isEcommerce||ECOMMERCE_EVENT_IDS.has(ev.eventName);
     const activeDims=ev.itemDimsOverride!==undefined?ev.itemDimsOverride:globalItemDims;
     const singleJson=useMemo(()=>JSON.stringify(buildGTMJson([ev],mode,{include:false,measurementId:"",sendPageView:true},{include:false,conversionId:"",conversions:[]},{include:false,datasetId:"",events:[]},globalItemDims),null,2),[ev,mode,globalItemDims]);
@@ -478,58 +401,57 @@
     const effectiveParamCount=ev.params.length+(isEcom&&ev.includeItemDims?activeDims.filter(d=>d.param).length:0);
 
     return <div className="event-card">
-      <div style={{background:DARK,padding:"0.75rem 1.25rem",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>upd("collapsed",!ev.collapsed)}>
-        <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
-          <span style={{fontSize:"0.85rem",fontWeight:800,color:ev.eventName?"white":"#666"}}>{ev.eventName||"Custom event…"}</span>
+      <div style={{background:DARK,padding:"0.65rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>upd("collapsed",!ev.collapsed)}>
+        <div style={{display:"flex",alignItems:"center",gap:"0.65rem"}}>
+          <span style={{fontSize:"0.82rem",fontWeight:800,color:ev.eventName?"white":"#666"}}>{ev.eventName||"Custom event…"}</span>
           {ev.eventName&&<>
             {isEcom&&<span className="badge" style={{background:"#1a2a1a",color:"#6dbf6d"}}>ecom</span>}
-            {isEcom&&ev.includeItemDims&&<span className="badge" style={{background:"#1a2a20",color:"#4dbf80"}}>+{activeDims.filter(d=>d.param).length} item dims</span>}
+            {isEcom&&ev.includeItemDims&&<span className="badge" style={{background:"#1a2a20",color:"#4dbf80"}}>+{activeDims.filter(d=>d.param).length} dims</span>}
             <span className="badge" style={{background:"#2a1a12",color:ORANGE}}>{effectiveParamCount} params</span>
             {mode==="existing"&&<span className="badge" style={{background:ev.includeTrigger?"#2a1a12":"#222",color:ev.includeTrigger?ORANGE:"#666"}}>{ev.includeTrigger?"trigger ✓":"no trigger"}</span>}
           </>}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>
-          <button onClick={e=>{e.stopPropagation();onDuplicate();}} style={{fontSize:"0.65rem",padding:"0.2rem 0.5rem",borderRadius:"4px",fontWeight:700,border:"1px solid #444",cursor:"pointer",background:"transparent",color:"#aaa",fontFamily:"inherit"}}>Dupliker</button>
-          <button onClick={e=>{e.stopPropagation();onRemove();}} style={{fontSize:"0.65rem",padding:"0.2rem 0.5rem",borderRadius:"4px",fontWeight:700,border:"1px solid #c0392b",cursor:"pointer",background:"transparent",color:"#e74c3c",fontFamily:"inherit"}}>Slet</button>
-          <span style={{color:"#555",fontSize:"0.8rem"}}>{ev.collapsed?"▼":"▲"}</span>
+        <div style={{display:"flex",alignItems:"center",gap:"0.4rem"}}>
+          <button onClick={e=>{e.stopPropagation();onDuplicate();}} style={{fontSize:"0.6rem",padding:"0.15rem 0.4rem",borderRadius:"4px",fontWeight:700,border:"1px solid #444",cursor:"pointer",background:"transparent",color:"#aaa",fontFamily:"inherit"}}>Dupliker</button>
+          <button onClick={e=>{e.stopPropagation();onRemove();}} style={{fontSize:"0.6rem",padding:"0.15rem 0.4rem",borderRadius:"4px",fontWeight:700,border:"1px solid #c0392b",cursor:"pointer",background:"transparent",color:"#e74c3c",fontFamily:"inherit"}}>Slet</button>
+          <span style={{color:"#555",fontSize:"0.75rem"}}>{ev.collapsed?"▼":"▲"}</span>
         </div>
       </div>
-
-      {!ev.collapsed&&<div style={{padding:"1.25rem"}}>
-        <div style={{display:"grid",gridTemplateColumns:ev.selectedId==="custom"?"1fr 1fr 1fr":"1fr 1fr",gap:"0.75rem",marginBottom:"0.75rem"}}>
+      {!ev.collapsed&&<div style={{padding:"1rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:ev.selectedId==="custom"?"1fr 1fr 1fr":"1fr 1fr",gap:"0.65rem",marginBottom:"0.65rem"}}>
           <div><label style={S.label}>Event</label><select style={S.input} value={ev.selectedId} onChange={e=>handleSelect(e.target.value)}>{GA4_EVENTS.map(g=><optgroup key={g.group} label={g.group}>{g.events.map(e=><option key={e.id} value={e.id}>{e.name||"Custom…"}</option>)}</optgroup>)}</select></div>
           <div><label style={S.label}>Measurement ID Override</label><input style={{...S.input,fontFamily:"monospace",color:ev.measurementId.startsWith("{{")?ORANGE:DARK}} type="text" value={ev.measurementId} onChange={e=>upd("measurementId",e.target.value)}/></div>
           {ev.selectedId==="custom"&&<div><label style={S.label}>Event Name</label><input style={S.input} type="text" value={ev.eventName} onChange={e=>{const v=e.target.value.toLowerCase();const isE=ECOMMERCE_EVENT_IDS.has(v);onChange({...ev,eventName:v,tagName:`ga4 - ${v}`,triggerName:`ce - ${v}`,isEcommerce:isE,includeItemDims:isE});}} placeholder="e.g. form_submit"/></div>}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:mode==="existing"?"1fr 1fr 1fr":"1fr 1fr",gap:"0.75rem",marginBottom:"0.75rem",alignItems:"flex-end"}}>
+        <div style={{display:"grid",gridTemplateColumns:mode==="existing"?"1fr 1fr 1fr":"1fr 1fr",gap:"0.65rem",marginBottom:"0.65rem",alignItems:"flex-end"}}>
           <div><label style={S.label}>Tag Name</label><input style={S.input} type="text" value={ev.tagName} onChange={e=>upd("tagName",e.target.value)}/></div>
           <div><label style={S.label}>Trigger Name</label><input style={S.input} type="text" value={ev.triggerName} onChange={e=>upd("triggerName",e.target.value)}/></div>
           {mode==="existing"&&<div style={{paddingBottom:"0.65rem"}}><Toggle on={ev.includeTrigger} onChange={v=>upd("includeTrigger",v)} label="Inkluder trigger"/></div>}
         </div>
-        <div style={{background:"#fafaf9",borderRadius:"8px",border:"1.5px solid #e8e6e2",overflow:"hidden",marginBottom:"0.75rem"}}>
-          <div style={{padding:"0.5rem 1rem",background:"#f0ede9",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:"0.65rem",fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Base Parameters <span style={{color:ORANGE}}>{ev.params.length}</span></span>
+        <div style={{background:"#fafaf9",borderRadius:"8px",border:"1.5px solid #e8e6e2",overflow:"hidden",marginBottom:"0.65rem"}}>
+          <div style={{padding:"0.5rem 0.875rem",background:"#f0ede9",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:"0.65rem",fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em"}}>Parameters <span style={{color:ORANGE}}>{ev.params.length}</span></span>
             <button onClick={addParam} style={{fontSize:"0.65rem",padding:"0.15rem 0.5rem",borderRadius:"4px",fontWeight:700,border:`1.5px solid ${ORANGE}`,cursor:"pointer",background:"transparent",color:ORANGE,fontFamily:"inherit"}}>+ Tilføj</button>
           </div>
-          {ev.params.length===0?<p style={{fontSize:"0.75rem",color:"#ccc",padding:"1rem",textAlign:"center"}}>Ingen parametre</p>:<>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",padding:"0.35rem 1rem",borderBottom:"1px solid #e8e6e2"}}><span style={{...S.label,marginBottom:0}}>Parameter</span><span style={{...S.label,marginBottom:0}}>Værdi</span><span></span></div>
-            {ev.params.map((p,i)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",alignItems:"center",padding:"0.4rem 1rem",borderBottom:i<ev.params.length-1?"1px solid #f0ede9":"none"}}>
-              <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem"}} type="text" value={p.name} onChange={e=>updParam(p.id,"name",e.target.value)} placeholder="event_action"/>
-              <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.65rem",fontFamily:p.value.startsWith("{{")?'"Courier New",monospace':"inherit",color:p.value.startsWith("{{")?ORANGE:DARK}} type="text" value={p.value} onChange={e=>updParam(p.id,"value",e.target.value)} placeholder="{{dlv - ecommerce.value}}"/>
+          {ev.params.length===0?<p style={{fontSize:"0.75rem",color:"#ccc",padding:"0.75rem",textAlign:"center"}}>Ingen parametre</p>:<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",padding:"0.3rem 0.875rem",borderBottom:"1px solid #e8e6e2"}}><span style={{...S.label,marginBottom:0}}>Parameter</span><span style={{...S.label,marginBottom:0}}>Værdi</span><span></span></div>
+            {ev.params.map((p,i)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 24px",gap:"0.5rem",alignItems:"center",padding:"0.35rem 0.875rem",borderBottom:i<ev.params.length-1?"1px solid #f0ede9":"none"}}>
+              <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.6rem"}} type="text" value={p.name} onChange={e=>updParam(p.id,"name",e.target.value)} placeholder="event_action"/>
+              <input style={{...S.input,fontSize:"0.78rem",padding:"0.4rem 0.6rem",fontFamily:p.value.startsWith("{{")?'"Courier New",monospace':"inherit",color:p.value.startsWith("{{")?ORANGE:DARK}} type="text" value={p.value} onChange={e=>updParam(p.id,"value",e.target.value)} placeholder="{{dlv - ecommerce.value}}"/>
               <button onClick={()=>removeParam(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:"1.1rem",lineHeight:1}}>×</button>
             </div>)}
           </>}
         </div>
-        {isEcom&&<div style={{background:ev.includeItemDims?"#f0faf0":"#fafaf9",border:`1.5px solid ${ev.includeItemDims?"#c8eac8":"#e8e6e2"}`,borderRadius:"8px",padding:"0.75rem 1rem",marginBottom:"0.75rem",transition:"all 0.2s"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:ev.includeItemDims&&activeDims.filter(d=>d.param).length>0?"0.6rem":"0"}}>
+        {isEcom&&<div style={{background:ev.includeItemDims?"#f0faf0":"#fafaf9",border:`1.5px solid ${ev.includeItemDims?"#c8eac8":"#e8e6e2"}`,borderRadius:"8px",padding:"0.65rem 0.875rem",marginBottom:"0.65rem",transition:"all 0.2s"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:ev.includeItemDims&&activeDims.filter(d=>d.param).length>0?"0.5rem":"0"}}>
             <Toggle on={ev.includeItemDims} onChange={v=>upd("includeItemDims",v)} label="Item Dimensioner" small/>
-            {ev.includeItemDims&&<span style={{fontSize:"0.65rem",color:"#aaa"}}>bruger global skabelon ({activeDims.filter(d=>d.param).length} dims)</span>}
+            {ev.includeItemDims&&<span style={{fontSize:"0.65rem",color:"#aaa"}}>fra global skabelon ({activeDims.filter(d=>d.param).length})</span>}
           </div>
           {ev.includeItemDims&&activeDims.filter(d=>d.param).length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"0.3rem"}}>{activeDims.filter(d=>d.param).map(d=><span key={d.id} style={{fontSize:"0.7rem",background:"white",border:"1px solid #c8eac8",borderRadius:"4px",padding:"0.1rem 0.4rem",fontFamily:"monospace",color:"#2a7a2a"}}>{d.param}</span>)}</div>}
         </div>}
         <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-          <button onClick={()=>upd("showJSON",!ev.showJSON)} style={{fontSize:"0.75rem",padding:"0.4rem 0.75rem",borderRadius:"6px",fontWeight:700,border:"1.5px solid #e2e0dc",cursor:"pointer",background:"white",color:"#888",fontFamily:"inherit"}}>{ev.showJSON?"▲ Skjul JSON":"▼ Vis JSON"}</button>
-          <button disabled={!isValid} onClick={()=>{const b=new Blob([singleJson],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`gtm-${ev.eventName||"event"}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}} style={{fontSize:"0.75rem",padding:"0.4rem 0.75rem",borderRadius:"6px",fontWeight:700,border:"none",cursor:isValid?"pointer":"not-allowed",background:isValid?ORANGE:"#e0ddd9",color:"white",fontFamily:"inherit"}}>⬇ Download tag</button>
+          <button onClick={()=>upd("showJSON",!ev.showJSON)} style={{fontSize:"0.75rem",padding:"0.35rem 0.65rem",borderRadius:"6px",fontWeight:700,border:"1.5px solid #e2e0dc",cursor:"pointer",background:"white",color:"#888",fontFamily:"inherit"}}>{ev.showJSON?"▲ Skjul":"▼ JSON"}</button>
+          <button disabled={!isValid} onClick={()=>{const b=new Blob([singleJson],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=`gtm-${ev.eventName||"event"}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}} style={{fontSize:"0.75rem",padding:"0.35rem 0.65rem",borderRadius:"6px",fontWeight:700,border:"none",cursor:isValid?"pointer":"not-allowed",background:isValid?ORANGE:"#e0ddd9",color:"white",fontFamily:"inherit"}}>⬇ Download</button>
         </div>
         {ev.showJSON&&<pre className="json-preview">{singleJson}</pre>}
       </div>}
@@ -539,6 +461,9 @@
   // ─── APP ──────────────────────────────────────────────────────────────────
   function App(){
     const [mode,setMode]=useState("new");
+    const [ga4Open,setGa4Open]=useState(true);
+    const [gadsOpen,setGadsOpen]=useState(true);
+    const [metaOpen,setMetaOpen]=useState(true);
     const [ga4Config,setGa4Config]=useState({include:true,measurementId:"",sendPageView:true});
     const [gadsConfig,setGadsConfig]=useState({include:false,conversionId:"",conversions:[makeConversion("purchase")]});
     const [metaConfig,setMetaConfig]=useState({include:false,datasetId:"",events:META_EVENTS_LIST.map(e=>({...e,enabled:["PageView","Purchase","AddToCart","ViewContent"].includes(e.id)}))});
@@ -552,7 +477,6 @@
     const removeEvent=(u)=>setEvents(prev=>prev.filter(e=>e.uid!==u));
     const duplicateEvent=(u)=>{const ev=events.find(e=>e.uid===u);if(!ev)return;const clone={...ev,uid:uid(),tagName:ev.tagName+" (kopi)",collapsed:false};const idx=events.findIndex(e=>e.uid===u);const next=[...events];next.splice(idx+1,0,clone);setEvents(next);};
     const addEvent=()=>setEvents(prev=>[...prev,makeEvent(ALL_GA4_EVENTS.find(e=>e.id==="add_to_cart"),mode)]);
-
     const updateConv=(u,updated)=>setGadsConfig(g=>({...g,conversions:g.conversions.map(c=>c.uid===u?updated:c)}));
     const removeConv=(u)=>setGadsConfig(g=>({...g,conversions:g.conversions.filter(c=>c.uid!==u)}));
     const addConv=()=>setGadsConfig(g=>({...g,conversions:[...g.conversions,makeConversion("purchase")]}));
@@ -574,29 +498,32 @@
 
     return <div style={{minHeight:"100vh",background:"#f5f4f2",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"2rem 1rem 3rem"}}>
       <div style={{width:"100%",maxWidth:"820px"}}>
+
         <div style={{marginBottom:"1.5rem"}}>
           <h1 style={{fontSize:"1.5rem",fontWeight:900,color:DARK,letterSpacing:"-0.03em"}}>GA4 Event Builder</h1>
           <p style={{fontSize:"0.875rem",color:"#888",marginTop:"0.35rem"}}>Generer GTM-tags, triggers og variabler klar til direkte import</p>
           <div style={{height:"3px",width:"40px",background:ORANGE,borderRadius:"2px",marginTop:"0.75rem"}}/>
         </div>
 
+        {/* Mode tabs */}
         <div style={{...S.card,padding:0,marginBottom:"1rem"}}>
           <div style={{display:"flex",borderBottom:"1.5px solid #f0ede9",padding:"0 1.25rem"}}>
             <button className={`tab-btn ${mode==="new"?"active":"inactive"}`} onClick={()=>updateMode("new")}>🆕 Ny container</button>
             <button className={`tab-btn ${mode==="existing"?"active":"inactive"}`} onClick={()=>updateMode("existing")}>🔧 Eksisterende container</button>
           </div>
           <div style={{padding:"0.75rem 1.25rem",background:"#fafaf9"}}>
-            {mode==="new"?<p style={{fontSize:"0.8rem",color:"#666",lineHeight:1.5}}><strong style={{color:DARK}}>Ny container:</strong> Genererer alle tags, triggers og variabler inkl. Google Ads conversion tags.</p>
+            {mode==="new"?<p style={{fontSize:"0.8rem",color:"#666",lineHeight:1.5}}><strong style={{color:DARK}}>Ny container:</strong> Genererer alle tags, triggers og variabler inkl. constants, DL-variabler og built-ins.</p>
               :<p style={{fontSize:"0.8rem",color:"#666",lineHeight:1.5}}><strong style={{color:DARK}}>Eksisterende container:</strong> Kun tags i JSON. Triggers valgfrit. Tjekliste viser hvad der skal eksistere.</p>}
           </div>
         </div>
 
+        {/* Summary bar */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
           <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
             {ga4Config.include&&<span className="badge" style={{background:"#e8f8e8",border:"1.5px solid #c8eac8",color:"#2a7a2a",fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>GA4 ✓</span>}
-            {gadsConfig.include&&<span className="badge" style={{background:"#e8f0ff",border:"1.5px solid #c8d8ff",color:"#1a3fbf",fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>Google Ads {validConversions.length > 0 ? `· ${validConversions.length} conv` : "✓"}</span>}
+            {gadsConfig.include&&<span className="badge" style={{background:"#e8f0ff",border:"1.5px solid #c8d8ff",color:"#1a3fbf",fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>Google Ads {validConversions.length>0?`· ${validConversions.length} conv`:"✓"}</span>}
             {metaConfig.include&&<span className="badge" style={{background:"#fff0e8",border:"1.5px solid #fdd0b8",color:ORANGE,fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>Meta ✓</span>}
-            {ecomWithDims>0&&<span className="badge" style={{background:"#f0faf0",border:"1.5px solid #c8eac8",color:"#2a7a2a",fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>{ecomWithDims} events med item dims</span>}
+            {ecomWithDims>0&&<span className="badge" style={{background:"#f0faf0",border:"1.5px solid #c8eac8",color:"#2a7a2a",fontSize:"0.7rem",padding:"0.25rem 0.6rem"}}>{ecomWithDims} events m. item dims</span>}
             <span className="badge" style={{background:"white",border:"1.5px solid #e8e6e2",color:DARK,fontSize:"0.7rem",padding:"0.25rem 0.5rem"}}>{totalTags} tags</span>
           </div>
           <button onClick={downloadAll} disabled={!canDownload} style={{padding:"0.6rem 1.25rem",background:canDownload?ORANGE:"#e0ddd9",color:"white",border:"none",borderRadius:"8px",fontSize:"0.85rem",fontWeight:800,cursor:canDownload?"pointer":"not-allowed",fontFamily:"inherit",whiteSpace:"nowrap"}}>
@@ -604,45 +531,79 @@
           </button>
         </div>
 
-        {/* GA4 */}
+        {/* ── GA4 SECTION ─────────────────────────────────────── */}
         <div className="section-divider"><div className="section-divider-line"/><span className="section-divider-label">GA4</span><div className="section-divider-line"/></div>
-        <PlatformCard title="Google Tag – GA4" color="#34a853" icon="G4" enabled={ga4Config.include} onToggle={v=>setGa4Config({...ga4Config,include:v})}>
+
+        <PlatformCard title="Google Tag – GA4" color="#34a853" icon="G4"
+          enabled={ga4Config.include} onToggle={v=>setGa4Config({...ga4Config,include:v})}
+          collapsed={!ga4Open} onCollapse={()=>setGa4Open(o=>!o)}
+          badge={ga4Config.measurementId||"Measurement ID ikke udfyldt"}>
+
+          {/* Google Tag config */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem",alignItems:"flex-end",marginBottom:"0.5rem"}}>
             <div><label style={S.label}>Measurement ID</label><input style={{...S.input,fontFamily:"monospace",color:ga4Config.measurementId.startsWith("G-")?ORANGE:DARK}} type="text" value={ga4Config.measurementId} onChange={e=>setGa4Config({...ga4Config,measurementId:e.target.value})} placeholder="G-XXXXXXXXXX"/></div>
             <div style={{paddingBottom:"0.65rem"}}><Toggle on={ga4Config.sendPageView} onChange={v=>setGa4Config({...ga4Config,sendPageView:v})} label="Send page_view automatisk"/></div>
           </div>
+
+          {/* Item dims template */}
           <GlobalItemDimsTemplate dims={globalItemDims} onChange={setGlobalItemDims}/>
+
+          {/* GA4 Event Tags – now inside GA4 section */}
+          <div className="sub-section">
+            <div className="sub-section-header">
+              <div>
+                <p style={{fontSize:"0.8rem",fontWeight:700,color:DARK}}>GA4 Event Tags</p>
+                <p style={{fontSize:"0.7rem",color:"#aaa",marginTop:"0.1rem"}}>{validEvents.length} event{validEvents.length!==1?"s":""} konfigureret</p>
+              </div>
+              <button onClick={addEvent} style={{fontSize:"0.75rem",padding:"0.35rem 0.875rem",borderRadius:"6px",fontWeight:700,border:`1.5px solid ${ORANGE}`,cursor:"pointer",background:"transparent",color:ORANGE,fontFamily:"inherit"}}>+ Tilføj event</button>
+            </div>
+
+            {mode==="existing"&&<VarChecklist ga4Events={validEvents} ga4Config={ga4Config} gadsConfig={gadsConfig} metaConfig={metaConfig} globalItemDims={globalItemDims}/>}
+
+            {events.length===0?<div style={{background:"#f5f4f2",borderRadius:"8px",padding:"1.25rem",textAlign:"center"}}><p style={{fontSize:"0.8rem",color:"#bbb"}}>Ingen events – klik "+ Tilføj event"</p></div>
+              :events.map(ev=><EventCard key={ev.uid} ev={ev} mode={mode} globalItemDims={globalItemDims} onChange={updated=>updateEvent(ev.uid,updated)} onRemove={()=>removeEvent(ev.uid)} onDuplicate={()=>duplicateEvent(ev.uid)}/>)}
+          </div>
         </PlatformCard>
 
-        {/* Google Ads */}
+        {/* ── GOOGLE ADS SECTION ──────────────────────────────── */}
         <div className="section-divider"><div className="section-divider-line"/><span className="section-divider-label">Google Ads</span><div className="section-divider-line"/></div>
-        <PlatformCard title="Google Ads" color="#4285f4" icon="GA" enabled={gadsConfig.include} onToggle={v=>setGadsConfig({...gadsConfig,include:v})}>
+
+        <PlatformCard title="Google Ads" color="#4285f4" icon="GA"
+          enabled={gadsConfig.include} onToggle={v=>setGadsConfig({...gadsConfig,include:v})}
+          collapsed={!gadsOpen} onCollapse={()=>setGadsOpen(o=>!o)}
+          badge={gadsConfig.conversionId||"Conversion ID ikke udfyldt"}>
+
           <div style={{marginBottom:"1rem"}}>
             <label style={S.label}>Conversion ID</label>
             <input style={{...S.input,fontFamily:"monospace",color:gadsConfig.conversionId?"#4285f4":DARK}} type="text" value={gadsConfig.conversionId} onChange={e=>setGadsConfig({...gadsConfig,conversionId:e.target.value})} placeholder="AW-XXXXXXXXXX"/>
-            <p style={{fontSize:"0.7rem",color:"#aaa",marginTop:"0.3rem"}}>Bruges til Google Tag, Conversion Linker og Remarketing. Find det i Google Ads → Tools → Conversions.</p>
+            <p style={{fontSize:"0.7rem",color:"#aaa",marginTop:"0.3rem"}}>Bruges til Google Tag, Conversion Linker og Remarketing.</p>
           </div>
 
-          <div style={{borderTop:"1.5px solid #f0ede9",paddingTop:"1rem"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"0.75rem"}}>
+          <div className="sub-section">
+            <div className="sub-section-header">
               <div>
-                <p style={{fontSize:"0.75rem",fontWeight:700,color:DARK}}>Conversion Tracking Tags</p>
-                <p style={{fontSize:"0.7rem",color:"#aaa",marginTop:"0.1rem"}}>Et tag per konvertering – kræver Conversion Label fra Google Ads</p>
+                <p style={{fontSize:"0.8rem",fontWeight:700,color:DARK}}>Conversion Tags</p>
+                <p style={{fontSize:"0.7rem",color:"#aaa",marginTop:"0.1rem"}}>{validConversions.length} af {gadsConfig.conversions.length} klar</p>
               </div>
-              <button onClick={addConv} style={{fontSize:"0.75rem",padding:"0.35rem 0.875rem",borderRadius:"6px",fontWeight:700,border:`1.5px solid #4285f4`,cursor:"pointer",background:"transparent",color:"#4285f4",fontFamily:"inherit"}}>+ Tilføj konvertering</button>
+              <button onClick={addConv} style={{fontSize:"0.75rem",padding:"0.35rem 0.875rem",borderRadius:"6px",fontWeight:700,border:"1.5px solid #4285f4",cursor:"pointer",background:"transparent",color:"#4285f4",fontFamily:"inherit"}}>+ Tilføj konvertering</button>
             </div>
-            {gadsConfig.conversions.length===0?<p style={{fontSize:"0.8rem",color:"#ccc",textAlign:"center",padding:"0.75rem"}}>Ingen conversion tags – klik "+ Tilføj konvertering"</p>
+            {gadsConfig.conversions.length===0?<p style={{fontSize:"0.8rem",color:"#ccc",textAlign:"center",padding:"0.75rem"}}>Ingen conversion tags endnu</p>
               :gadsConfig.conversions.map(conv=><ConversionCard key={conv.uid} conv={conv} onChange={updated=>updateConv(conv.uid,updated)} onRemove={()=>removeConv(conv.uid)}/>)}
           </div>
 
-          {mode==="new"&&gadsConfig.conversionId&&<div style={{marginTop:"0.75rem",background:"#e8f0ff",border:"1.5px solid #c8d8ff",borderRadius:"8px",padding:"0.65rem 0.875rem"}}>
-            <p style={{fontSize:"0.75rem",color:"#1a3fbf",lineHeight:1.5}}>✓ Genererer: <strong>Constant</strong> gads - conversion id · <strong>Google Tag (gads)</strong> · <strong>Conversion Linker</strong> · <strong>Remarketing Tag</strong> + <strong>{validConversions.length} conversion tag{validConversions.length!==1?"s":""}</strong></p>
+          {mode==="new"&&gadsConfig.conversionId&&<div style={{marginTop:"1rem",background:"#e8f0ff",border:"1.5px solid #c8d8ff",borderRadius:"8px",padding:"0.65rem 0.875rem"}}>
+            <p style={{fontSize:"0.75rem",color:"#1a3fbf",lineHeight:1.5}}>✓ Genererer: <strong>Constant</strong> · <strong>Google Tag (gads)</strong> · <strong>Conversion Linker</strong> · <strong>Remarketing</strong> + <strong>{validConversions.length} conversion tag{validConversions.length!==1?"s":""}</strong></p>
           </div>}
         </PlatformCard>
 
-        {/* Meta */}
+        {/* ── META SECTION ────────────────────────────────────── */}
         <div className="section-divider"><div className="section-divider-line"/><span className="section-divider-label">Meta</span><div className="section-divider-line"/></div>
-        <PlatformCard title="Meta Pixel (cvt_KFNBV template)" color="#1877f2" icon="M" enabled={metaConfig.include} onToggle={v=>setMetaConfig({...metaConfig,include:v})}>
+
+        <PlatformCard title="Meta Pixel (cvt_KFNBV template)" color="#1877f2" icon="M"
+          enabled={metaConfig.include} onToggle={v=>setMetaConfig({...metaConfig,include:v})}
+          collapsed={!metaOpen} onCollapse={()=>setMetaOpen(o=>!o)}
+          badge={metaConfig.datasetId||"Dataset ID ikke udfyldt"}>
+
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:"8px",padding:"0.65rem 0.875rem",marginBottom:"0.875rem",display:"flex",gap:"0.5rem"}}>
             <span style={{color:"#f59e0b",flexShrink:0}}>⚠</span>
             <p style={{fontSize:"0.75rem",color:"#92400e",lineHeight:1.5}}>Kræver at <code style={{fontFamily:"monospace",background:"rgba(0,0,0,0.06)",padding:"0 3px",borderRadius:2}}>cvt_KFNBV</code> template er installeret fra Community Template Gallery.</p>
@@ -651,15 +612,10 @@
           <MetaEventsSelector events={metaConfig.events} onChange={evts=>setMetaConfig({...metaConfig,events:evts})}/>
         </PlatformCard>
 
-        {/* GA4 Event Tags */}
-        <div className="section-divider"><div className="section-divider-line"/><span className="section-divider-label">GA4 Event Tags</span><div className="section-divider-line"/></div>
-        {mode==="existing"&&<VarChecklist ga4Events={validEvents} ga4Config={ga4Config} gadsConfig={gadsConfig} metaConfig={metaConfig} globalItemDims={globalItemDims}/>}
-        {events.map(ev=><EventCard key={ev.uid} ev={ev} mode={mode} globalItemDims={globalItemDims} onChange={updated=>updateEvent(ev.uid,updated)} onRemove={()=>removeEvent(ev.uid)} onDuplicate={()=>duplicateEvent(ev.uid)}/>)}
-        <button className="add-btn" onClick={addEvent}>+ Tilføj nyt GA4 event</button>
-
+        {/* Import guide */}
         <div style={{...S.card,borderLeft:`4px solid ${ORANGE}`,marginBottom:"0.75rem"}}>
           <p style={{...S.label,marginBottom:"0.75rem"}}>Sådan importerer du i GTM</p>
-          {(mode==="new"?[["1","Installer Meta-template fra Community Template Gallery hvis Meta er inkluderet"],["2","Gå til Admin → Import Container → Upload .json-filen"],["3","Vælg workspace → Merge → Rename conflicting tags"],["4","Preview og verificér alle tags, triggers og variabler"],["5","Opret event-scoped custom dimensions i GA4 for item dims hvis aktiveret – Admin → Custom definitions"],["6","Publish 🚀"]]:[["1","Gå til Admin → Import Container → Upload .json-filen"],["2","Vælg workspace → Merge → Rename conflicting tags"],["3","Kobl tags på eksisterende triggers hvis trigger ikke var inkluderet"],["4","Bekræft at variabler fra tjeklisten eksisterer i containeren"],["5","Opret event-scoped custom dimensions i GA4 for item dims hvis relevant"],["6","Preview, verificér og publish 🚀"]]).map(([n,t])=><div key={n} style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",marginBottom:"0.35rem"}}><span style={{fontSize:"0.7rem",fontWeight:900,color:ORANGE,flexShrink:0}}>{n}.</span><p style={{fontSize:"0.8rem",color:"#555",lineHeight:1.5}}>{t}</p></div>)}
+          {(mode==="new"?[["1","Installer Meta-template fra Community Template Gallery hvis Meta er inkluderet"],["2","Gå til Admin → Import Container → Upload .json-filen"],["3","Vælg workspace → Merge → Rename conflicting tags"],["4","Preview og verificér alle tags, triggers og variabler"],["5","Opret event-scoped custom dimensions i GA4 for item dims – Admin → Custom definitions"],["6","Publish 🚀"]]:[["1","Gå til Admin → Import Container → Upload .json-filen"],["2","Vælg workspace → Merge → Rename conflicting tags"],["3","Kobl tags på eksisterende triggers hvis trigger ikke var inkluderet"],["4","Bekræft at variabler fra tjeklisten eksisterer"],["5","Opret event-scoped custom dimensions i GA4 for item dims hvis relevant"],["6","Preview, verificér og publish 🚀"]]).map(([n,t])=><div key={n} style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",marginBottom:"0.35rem"}}><span style={{fontSize:"0.7rem",fontWeight:900,color:ORANGE,flexShrink:0}}>{n}.</span><p style={{fontSize:"0.8rem",color:"#555",lineHeight:1.5}}>{t}</p></div>)}
         </div>
 
         <div style={{textAlign:"center",marginTop:"1.5rem"}}><span style={{fontSize:"0.7rem",color:"#bbb"}}><span style={{color:ORANGE,fontWeight:900}}>calibrate</span> · part of iO</span></div>
